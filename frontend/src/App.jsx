@@ -112,7 +112,8 @@ export default function App() {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       const micCtx = new Ctx({ sampleRate: 16000 });
       await micCtx.resume();
-      await micCtx.audioWorklet.addModule(new URL("./pcm-worklet.js", import.meta.url));
+      // served from public/ as a real same-origin file (robust on iOS Safari, unlike data: URLs)
+      await micCtx.audioWorklet.addModule("/pcm-worklet.js");
       const source = micCtx.createMediaStreamSource(streamRef.current);
       const node = new AudioWorkletNode(micCtx, "pcm-capture");
       node.port.onmessage = (e) => {
