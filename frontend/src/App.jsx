@@ -52,6 +52,7 @@ export default function App() {
   const stop = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = null;
+    teardownVoice();
     if (wsRef.current) wsRef.current.close();
     wsRef.current = null;
     if (streamRef.current) {
@@ -60,7 +61,7 @@ export default function App() {
     }
     setRunning(false);
     setWsState("closed");
-  }, []);
+  }, [teardownVoice]);
 
   const grabFrame = useCallback(() => {
     const video = videoRef.current;
