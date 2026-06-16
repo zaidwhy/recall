@@ -122,6 +122,10 @@ async def ws(websocket: WebSocket) -> None:
             elif msg.get("type") == "live_stop":
                 log.info("live_stop")
                 await _stop_live(live, websocket)
+            elif msg.get("type") in ("talk_start", "talk_end"):
+                q = live.get("queue")
+                if q is not None:
+                    q.put_nowait("start" if msg["type"] == "talk_start" else "end")
             elif msg.get("type") == "frame":
                 try:
                     data = _decode_frame(msg.get("data", ""))
