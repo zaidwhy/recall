@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AudioPlayer, downsampleTo16k, f32ToInt16 } from "./audio.js";
 
 const CAPTURE_INTERVAL_MS = 2000; // Week 1: gentle sampling, just proving the pipe
 const JPEG_QUALITY = 0.6;
