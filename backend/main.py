@@ -86,9 +86,9 @@ async def ws(websocket: WebSocket) -> None:
 
             # Binary frame = mic audio for the Live session.
             if message.get("bytes") is not None:
-                q = live.get("queue")
-                if q is not None:
-                    q.put_nowait(message["bytes"])
+                audio_q = live.get("queue")
+                if audio_q is not None:
+                    audio_q.put_nowait(message["bytes"])
                 continue
 
             raw = message.get("text")
