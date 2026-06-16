@@ -23,12 +23,22 @@ from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
+from . import perception  # noqa: E402  (after load_dotenv so GEMINI_API_KEY is available)
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger("recall")
 
 app = FastAPI(title="Recall", version="0.1.0")
 
 DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_DIR.mkdir(exist_ok=True)
+
+
+def _decode_frame(payload: str) -> bytes:
+    if "," in payload:
+        payload = payload.split(",", 1)[1]
+    return base64.b64decode(payload, validate=False)
 
 
 @app.get("/health")
