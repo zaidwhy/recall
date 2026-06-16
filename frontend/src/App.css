@@ -83,6 +83,54 @@ button:disabled {
   opacity: 0.55;
 }
 
+.voice {
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid #2f3e5e;
+}
+
+button.talk {
+  background: #1d2840;
+  color: var(--text);
+  border: 1px solid #2f3e5e;
+  touch-action: none;
+  user-select: none;
+}
+
+button.talk.talking {
+  background: #3a1320;
+  border-color: var(--danger);
+  color: #ffd9d9;
+}
+
+.caption {
+  background: var(--panel);
+  border: 1px solid #25304a;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.caption p {
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+.caption .you {
+  color: var(--muted);
+}
+
+.caption .recall {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .observation {
   background: var(--panel);
   border: 1px solid #2a6b4a;
