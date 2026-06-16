@@ -55,6 +55,7 @@ header h1 {
 .controls {
   margin: 16px 0;
   display: flex;
+  gap: 10px;
   justify-content: center;
 }
 
