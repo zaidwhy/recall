@@ -147,15 +147,23 @@ export default function App() {
   }, [teardownVoice]);
 
   const startTalk = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN || talkingRef.current) return;
     setUserText("");
     setAssistantText("");
     talkingRef.current = true;
     setTalking(true);
+    ws.send(JSON.stringify({ type: "talk_start" })); // manual activity start
   }, []);
 
   const stopTalk = useCallback(() => {
+    if (!talkingRef.current) return;
     talkingRef.current = false;
     setTalking(false);
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "talk_end" })); // manual activity end -> model replies
+    }
   }, []);
 
   // Must be triggered by a user gesture (iOS Safari blocks camera/autoplay otherwise).
