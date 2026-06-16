@@ -1,0 +1,14 @@
+# Recall backend — Week 1 core
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-dotenv>=1.0
+websockets>=13.0
+pillow>=10.4
+
+# Gemini (Flash vision + Live API)
+google-genai>=0.8
+
+# Memory store (Week 2). If chromadb has no wheel for your Python yet,
+# install it in its own step; it is not needed for the Week 1 hello-world.
+chromadb>=0.5
+numpy>=1.26
