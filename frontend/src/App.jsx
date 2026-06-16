@@ -93,6 +93,70 @@ export default function App() {
     ws.send(JSON.stringify({ type: "analyze", ts: Date.now(), data: dataUrl }));
   }, [grabFrame]);
 
+  // Open the Gemini Live voice session. Must run inside a user gesture (audio contexts).
+  const startVoice = useCallback(async () => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      setError("Start the camera first — it opens the connection.");
+      return;
+    }
+    if (!streamRef.current) {
+      setError("No microphone stream. Restart the camera (grants mic too).");
+      return;
+    }
+    try {
+      const player = new AudioPlayer(24000);
+      await player.resume();
+      playerRef.current = player;
+
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const micCtx = new Ctx({ sampleRate: 16000 });
+      await micCtx.resume();
+      await micCtx.audioWorklet.addModule(new URL("./pcm-worklet.js", import.meta.url));
+      const source = micCtx.createMediaStreamSource(streamRef.current);
+      const node = new AudioWorkletNode(micCtx, "pcm-capture");
+      node.port.onmessage = (e) => {
+        if (!talkingRef.current) return; // push-to-talk gate (avoids echo during playback)
+        const w = wsRef.current;
+        if (!w || w.readyState !== WebSocket.OPEN) return;
+        const i16 = f32ToInt16(downsampleTo16k(e.data, micCtx.sampleRate));
+        w.send(i16.buffer);
+      };
+      source.connect(node);
+      const sink = micCtx.createGain();
+      sink.gain.value = 0; // keep the worklet pulling audio without audible monitoring
+      node.connect(sink);
+      sink.connect(micCtx.destination);
+
+      micCtxRef.current = micCtx;
+      workletRef.current = node;
+      micSourceRef.current = source;
+
+      ws.send(JSON.stringify({ type: "live_start" }));
+    } catch (e) {
+      setError(`Voice start failed: ${e?.message || e}`);
+      teardownVoice();
+    }
+  }, [teardownVoice]);
+
+  const endVoice = useCallback(() => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "live_stop" }));
+    teardownVoice();
+  }, [teardownVoice]);
+
+  const startTalk = useCallback(() => {
+    setUserText("");
+    setAssistantText("");
+    talkingRef.current = true;
+    setTalking(true);
+  }, []);
+
+  const stopTalk = useCallback(() => {
+    talkingRef.current = false;
+    setTalking(false);
+  }, []);
+
   // Must be triggered by a user gesture (iOS Safari blocks camera/autoplay otherwise).
   const start = useCallback(async () => {
     setError("");
