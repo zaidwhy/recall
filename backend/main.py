@@ -48,28 +48,81 @@ async def health() -> JSONResponse:
     return JSONResponse({"status": "ok", "frontend_built": DIST_DIR.is_dir()})
 
 
+async def _stop_live(live: dict, websocket: WebSocket) -> None:
+    task = live.get("task")
+    if task is not None:
+        task.cancel()
+        try:
+            await task
+        except (asyncio.CancelledError, Exception):
+            pass
+        live["task"] = None
+        live["queue"] = None
+        try:
+            await websocket.send_json({"type": "live_status", "state": "closed"})
+        except Exception:
+            pass
+
+
 @app.websocket("/ws")
 async def ws(websocket: WebSocket) -> None:
-    """Receive sampled camera frames from the phone and ack them.
+    """Phone <-> backend channel.
 
-    Messages are JSON: {"type": "frame", "ts": <ms>, "data": "<base64 jpeg>"}.
-    For Week 1 we only count + measure; later this feeds the perception pipeline.
+    JSON text messages: frame / analyze / ping / live_start / live_stop.
+    Binary messages: mic audio (PCM16 @ 16 kHz) for an active Live session.
+    Binary out: Gemini Live audio (PCM @ 24 kHz). See live.py.
     """
     await websocket.accept()
     peer = websocket.client.host if websocket.client else "?"
     log.info("WS connected from %s", peer)
     frames = 0
     total_bytes = 0
+    live: dict = {"task": None, "queue": None}
     try:
         while True:
-            raw = await websocket.receive_text()
+            message = await websocket.receive()
+            if message.get("type") == "websocket.disconnect":
+                break
+
+            # Binary frame = mic audio for the Live session.
+            if message.get("bytes") is not None:
+                q = live.get("queue")
+                if q is not None:
+                    q.put_nowait(message["bytes"])
+                continue
+
+            raw = message.get("text")
+            if raw is None:
+                continue
             try:
                 msg = json.loads(raw)
             except json.JSONDecodeError:
                 await websocket.send_json({"type": "error", "detail": "invalid json"})
                 continue
 
-            if msg.get("type") == "frame":
+            if msg.get("type") == "live_start":
+                if live.get("task") is None:
+                    q: asyncio.Queue = asyncio.Queue()
+                    live["queue"] = q
+
+                    async def _runner() -> None:
+                        try:
+                            await run_live(websocket, q)
+                        except asyncio.CancelledError:
+                            pass
+                        except Exception as e:
+                            log.exception("live session error")
+                            try:
+                                await websocket.send_json({"type": "error", "detail": f"live: {e}"})
+                            except Exception:
+                                pass
+
+                    live["task"] = asyncio.create_task(_runner())
+                    log.info("live_start")
+            elif msg.get("type") == "live_stop":
+                log.info("live_stop")
+                await _stop_live(live, websocket)
+            elif msg.get("type") == "frame":
                 try:
                     data = _decode_frame(msg.get("data", ""))
                 except Exception:
