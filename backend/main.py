@@ -102,10 +102,10 @@ async def ws(websocket: WebSocket) -> None:
 
             if msg.get("type") == "live_start":
                 if live.get("task") is None:
-                    q: asyncio.Queue = asyncio.Queue()
-                    live["queue"] = q
+                    new_q: asyncio.Queue = asyncio.Queue()
+                    live["queue"] = new_q
 
-                    async def _runner() -> None:
+                    async def _runner(q: asyncio.Queue = new_q) -> None:
                         try:
                             await run_live(websocket, q)
                         except asyncio.CancelledError:
