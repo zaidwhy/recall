@@ -322,6 +322,10 @@ export default function App() {
           <dt>Last ack</dt>
           <dd>{lastAck ? `#${lastAck.frame} · ${(lastAck.bytes / 1024).toFixed(1)} KB` : "—"}</dd>
         </div>
+        <div>
+          <dt>Voice</dt>
+          <dd>{liveState === "open" ? (talking ? "listening" : "ready") : "off"}</dd>
+        </div>
       </dl>
 
       {error && <div className="error">{error}</div>}
