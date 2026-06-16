@@ -146,11 +146,31 @@ export default function App() {
             Start camera
           </button>
         ) : (
-          <button className="danger" onClick={stop}>
-            Stop
-          </button>
+          <>
+            <button className="primary" onClick={analyzeFrame} disabled={analyzing}>
+              {analyzing ? "Analyzing…" : "What am I looking at?"}
+            </button>
+            <button className="danger" onClick={stop}>
+              Stop
+            </button>
+          </>
         )}
       </div>
+
+      {observation && (
+        <div className="observation">
+          <div className="loc">📍 {observation.location_label}</div>
+          <p className="desc">{observation.description}</p>
+          <div className="chips">
+            {observation.objects.map((o, i) => (
+              <span key={i} className="chip">
+                {o}
+              </span>
+            ))}
+          </div>
+          <div className="latency">Gemini Flash · {observation.latency_ms} ms</div>
+        </div>
+      )}
 
       <dl className="status">
         <div>
