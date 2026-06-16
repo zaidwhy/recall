@@ -259,6 +259,37 @@ export default function App() {
         )}
       </div>
 
+      {running && (
+        <div className="voice">
+          {liveState === "idle" ? (
+            <button className="ghost" onClick={startVoice}>
+              🎙 Start voice
+            </button>
+          ) : (
+            <>
+              <button
+                className={talking ? "talk talking" : "talk"}
+                onPointerDown={startTalk}
+                onPointerUp={stopTalk}
+                onPointerLeave={stopTalk}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                {talking ? "🔴 Listening… (release to send)" : "🎤 Hold to talk"}
+              </button>
+              <button className="ghost" onClick={endVoice}>
+                End voice
+              </button>
+            </>
+          )}
+          {(userText || assistantText) && (
+            <div className="caption">
+              {userText && <p className="you">You: {userText}</p>}
+              {assistantText && <p className="recall">Recall: {assistantText}</p>}
+            </div>
+          )}
+        </div>
+      )}
+
       {observation && (
         <div className="observation">
           <div className="loc">📍 {observation.location_label}</div>
