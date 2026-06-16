@@ -79,6 +79,49 @@ button.danger {
   color: #2b0606;
 }
 
+button:disabled {
+  opacity: 0.55;
+}
+
+.observation {
+  background: var(--panel);
+  border: 1px solid #2a6b4a;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 0 0 16px;
+}
+
+.observation .loc {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.observation .desc {
+  margin: 6px 0 10px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  background: #1d2840;
+  border: 1px solid #2f3e5e;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.latency {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .status {
   display: grid;
   grid-template-columns: 1fr 1fr;
