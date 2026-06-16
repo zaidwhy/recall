@@ -19,6 +19,13 @@ export default function App() {
   const timerRef = useRef(null);
   const streamRef = useRef(null);
 
+  // voice (Gemini Live) refs
+  const micCtxRef = useRef(null);
+  const workletRef = useRef(null);
+  const micSourceRef = useRef(null);
+  const playerRef = useRef(null);
+  const talkingRef = useRef(false);
+
   const [running, setRunning] = useState(false);
   const [wsState, setWsState] = useState("idle"); // idle | connecting | open | closed
   const [framesSent, setFramesSent] = useState(0);
@@ -26,6 +33,21 @@ export default function App() {
   const [error, setError] = useState("");
   const [observation, setObservation] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [liveState, setLiveState] = useState("idle"); // idle | open
+  const [talking, setTalking] = useState(false);
+  const [userText, setUserText] = useState("");
+  const [assistantText, setAssistantText] = useState("");
+
+  const teardownVoice = useCallback(() => {
+    talkingRef.current = false;
+    setTalking(false);
+    try { workletRef.current?.disconnect(); } catch { /* ignore */ }
+    try { micSourceRef.current?.disconnect(); } catch { /* ignore */ }
+    try { micCtxRef.current?.close(); } catch { /* ignore */ }
+    playerRef.current?.close();
+    workletRef.current = micSourceRef.current = micCtxRef.current = playerRef.current = null;
+    setLiveState("idle");
+  }, []);
 
   const stop = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
