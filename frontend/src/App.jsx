@@ -23,6 +23,8 @@ export default function App() {
   const [framesSent, setFramesSent] = useState(0);
   const [lastAck, setLastAck] = useState(null);
   const [error, setError] = useState("");
+  const [observation, setObservation] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const stop = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
