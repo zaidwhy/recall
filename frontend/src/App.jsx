@@ -94,6 +94,13 @@ export default function App() {
         try {
           const msg = JSON.parse(ev.data);
           if (msg.type === "ack") setLastAck(msg);
+          else if (msg.type === "observation") {
+            setObservation(msg);
+            setAnalyzing(false);
+          } else if (msg.type === "error") {
+            setError(msg.detail || "server error");
+            setAnalyzing(false);
+          }
         } catch {
           /* ignore */
         }
