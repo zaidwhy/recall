@@ -5,8 +5,8 @@ built frontend (frontend/dist) AND exposes the /ws WebSocket. When fronted by a
 cloudflared quick tunnel, the phone loads an https page and the WebSocket upgrades
 to wss automatically — no mixed-content, no second tunnel.
 
-Week 1 scope: prove the phone -> WS-over-tunnel path. The /ws endpoint just accepts
-frames and acks them. Gemini ingestion/Live wiring lands in later phases.
+Week 2 additions: always-on ingestion loop (record_start / record_stop), ChromaDB
+memory store, /memory GET+DELETE endpoints, /thumbnails static serving.
 """
 
 from __future__ import annotations
@@ -24,18 +24,27 @@ from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
-from . import perception  # noqa: E402  (after load_dotenv so GEMINI_API_KEY is available)
+from . import memory, perception  # noqa: E402  (after load_dotenv so GEMINI_API_KEY is available)
 from .live import run_live  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger("recall")
 
-app = FastAPI(title="Recall", version="0.1.0")
+app = FastAPI(title="Recall", version="0.2.0")
 
 DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+THUMBS_DIR = DATA_DIR / "thumbnails"
 DATA_DIR.mkdir(exist_ok=True)
+THUMBS_DIR.mkdir(exist_ok=True)
 
+# Minimum seconds between Flash calls during always-on ingestion (quota guard).
+INGEST_INTERVAL_S = 5
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _decode_frame(payload: str) -> bytes:
     if "," in payload:
@@ -43,10 +52,34 @@ def _decode_frame(payload: str) -> bytes:
     return base64.b64decode(payload, validate=False)
 
 
+# ---------------------------------------------------------------------------
+# API routes (must be registered before static mounts)
+# ---------------------------------------------------------------------------
+
 @app.get("/health")
 async def health() -> JSONResponse:
     return JSONResponse({"status": "ok", "frontend_built": DIST_DIR.is_dir()})
 
+
+@app.get("/memory")
+async def get_memory() -> JSONResponse:
+    entries = await asyncio.to_thread(memory.list_all)
+    for e in entries:
+        e["thumbnail"] = f"/thumbnails/{e['id']}.jpg"
+    return JSONResponse(entries)
+
+
+@app.delete("/memory/{entry_id}")
+async def delete_memory(entry_id: str) -> JSONResponse:
+    found = await asyncio.to_thread(memory.delete_observation, entry_id)
+    if not found:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse({"deleted": entry_id})
+
+
+# ---------------------------------------------------------------------------
+# WebSocket helpers
+# ---------------------------------------------------------------------------
 
 async def _stop_live(live: dict, websocket: WebSocket) -> None:
     task = live.get("task")
@@ -64,11 +97,72 @@ async def _stop_live(live: dict, websocket: WebSocket) -> None:
             pass
 
 
+async def _stop_ingest(ingest: dict, websocket: WebSocket | None = None) -> None:
+    task = ingest.get("task")
+    if task is not None:
+        task.cancel()
+        try:
+            await task
+        except (asyncio.CancelledError, Exception):
+            pass
+        ingest["task"] = None
+    if websocket is not None:
+        try:
+            await websocket.send_json({"type": "record_status", "recording": False})
+        except Exception:
+            pass
+
+
+async def _ingest_loop(websocket: WebSocket) -> None:
+    """Always-on ingestion: sample last_frame.jpg every INGEST_INTERVAL_S seconds,
+    run scene-change detection, and only call Gemini Flash when something changed."""
+    try:
+        await websocket.send_json({"type": "record_status", "recording": True})
+    except Exception:
+        return
+
+    while True:
+        await asyncio.sleep(INGEST_INTERVAL_S)
+        frame_path = DATA_DIR / "last_frame.jpg"
+        if not frame_path.exists():
+            continue
+        try:
+            jpeg = frame_path.read_bytes()
+        except OSError:
+            continue
+        try:
+            changed = await asyncio.to_thread(perception.has_scene_changed, jpeg)
+            if not changed:
+                continue
+            obs = await asyncio.to_thread(perception.analyze_frame, jpeg)
+            entry_id = await asyncio.to_thread(memory.log_observation, obs, jpeg)
+            log.info("ingested %s @ %s…", obs["location_label"], entry_id[:8])
+            await websocket.send_json({
+                "type": "ingested",
+                "id": entry_id,
+                "thumbnail": f"/thumbnails/{entry_id}.jpg",
+                "objects": obs["objects"],
+                "location_label": obs["location_label"],
+                "description": obs["description"],
+                "timestamp": obs["timestamp"],
+                "latency_ms": obs["latency_ms"],
+            })
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("ingestion error (will retry next interval)")
+
+
+# ---------------------------------------------------------------------------
+# WebSocket
+# ---------------------------------------------------------------------------
+
 @app.websocket("/ws")
 async def ws(websocket: WebSocket) -> None:
     """Phone <-> backend channel.
 
-    JSON text messages: frame / analyze / ping / live_start / live_stop.
+    JSON text messages: frame / analyze / ping / live_start / live_stop /
+                        record_start / record_stop / talk_start / talk_end.
     Binary messages: mic audio (PCM16 @ 16 kHz) for an active Live session.
     Binary out: Gemini Live audio (PCM @ 24 kHz). See live.py.
     """
@@ -78,6 +172,7 @@ async def ws(websocket: WebSocket) -> None:
     frames = 0
     total_bytes = 0
     live: dict = {"task": None, "queue": None}
+    ingest: dict = {"task": None}
     try:
         while True:
             message = await websocket.receive()
@@ -100,7 +195,18 @@ async def ws(websocket: WebSocket) -> None:
                 await websocket.send_json({"type": "error", "detail": "invalid json"})
                 continue
 
-            if msg.get("type") == "live_start":
+            mtype = msg.get("type")
+
+            if mtype == "record_start":
+                if ingest.get("task") is None:
+                    ingest["task"] = asyncio.create_task(_ingest_loop(websocket))
+                    log.info("ingestion started")
+
+            elif mtype == "record_stop":
+                log.info("ingestion stopped")
+                await _stop_ingest(ingest, websocket)
+
+            elif mtype == "live_start":
                 if live.get("task") is None:
                     new_q: asyncio.Queue = asyncio.Queue()
                     live["queue"] = new_q
@@ -119,14 +225,17 @@ async def ws(websocket: WebSocket) -> None:
 
                     live["task"] = asyncio.create_task(_runner())
                     log.info("live_start")
-            elif msg.get("type") == "live_stop":
+
+            elif mtype == "live_stop":
                 log.info("live_stop")
                 await _stop_live(live, websocket)
-            elif msg.get("type") in ("talk_start", "talk_end"):
+
+            elif mtype in ("talk_start", "talk_end"):
                 q = live.get("queue")
                 if q is not None:
-                    q.put_nowait("start" if msg["type"] == "talk_start" else "end")
-            elif msg.get("type") == "frame":
+                    q.put_nowait("start" if mtype == "talk_start" else "end")
+
+            elif mtype == "frame":
                 try:
                     data = _decode_frame(msg.get("data", ""))
                 except Exception:
@@ -135,13 +244,13 @@ async def ws(websocket: WebSocket) -> None:
                 frames += 1
                 total_bytes += nbytes
                 if data:
-                    (DATA_DIR / "last_frame.jpg").write_bytes(data)  # for debugging / standalone tests
+                    (DATA_DIR / "last_frame.jpg").write_bytes(data)
                 log.info("frame #%d  %d bytes  (total %.1f KB)", frames, nbytes, total_bytes / 1024)
                 await websocket.send_json(
                     {"type": "ack", "frame": frames, "bytes": nbytes, "ts": msg.get("ts")}
                 )
-            elif msg.get("type") == "analyze":
-                # On-demand Gemini Flash vision (quota-safe: only when the user taps).
+
+            elif mtype == "analyze":
                 try:
                     data = _decode_frame(msg.get("data", ""))
                     log.info("analyze: %d bytes -> Gemini Flash", len(data))
@@ -151,19 +260,27 @@ async def ws(websocket: WebSocket) -> None:
                 except Exception as e:
                     log.exception("analyze failed")
                     await websocket.send_json({"type": "error", "detail": f"analyze failed: {e}"})
-            elif msg.get("type") == "ping":
+
+            elif mtype == "ping":
                 await websocket.send_json({"type": "pong"})
+
             else:
                 await websocket.send_json({"type": "error", "detail": "unknown message type"})
+
     except WebSocketDisconnect:
         pass
     finally:
         await _stop_live(live, websocket)
+        await _stop_ingest(ingest)
         log.info("WS disconnected from %s after %d frames (%.1f KB)", peer, frames, total_bytes / 1024)
 
 
-# Serve the built frontend from the same origin (mounted last so /ws and /health win).
-# During dev you usually run Vite separately; this matters for the mobile/demo path.
+# ---------------------------------------------------------------------------
+# Static mounts (order matters: specific paths before the catch-all "/")
+# ---------------------------------------------------------------------------
+
+app.mount("/thumbnails", StaticFiles(directory=str(THUMBS_DIR)), name="thumbnails")
+
 if DIST_DIR.is_dir():
     app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="frontend")
 else:
