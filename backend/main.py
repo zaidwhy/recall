@@ -68,20 +68,30 @@ async def ws(websocket: WebSocket) -> None:
                 continue
 
             if msg.get("type") == "frame":
-                payload = msg.get("data", "")
-                # strip data-url prefix if present
-                if "," in payload:
-                    payload = payload.split(",", 1)[1]
                 try:
-                    nbytes = len(base64.b64decode(payload, validate=False))
+                    data = _decode_frame(msg.get("data", ""))
                 except Exception:
-                    nbytes = 0
+                    data = b""
+                nbytes = len(data)
                 frames += 1
                 total_bytes += nbytes
+                if data:
+                    (DATA_DIR / "last_frame.jpg").write_bytes(data)  # for debugging / standalone tests
                 log.info("frame #%d  %d bytes  (total %.1f KB)", frames, nbytes, total_bytes / 1024)
                 await websocket.send_json(
                     {"type": "ack", "frame": frames, "bytes": nbytes, "ts": msg.get("ts")}
                 )
+            elif msg.get("type") == "analyze":
+                # On-demand Gemini Flash vision (quota-safe: only when the user taps).
+                try:
+                    data = _decode_frame(msg.get("data", ""))
+                    log.info("analyze: %d bytes -> Gemini Flash", len(data))
+                    obs = await asyncio.to_thread(perception.analyze_frame, data)
+                    log.info("observation (%dms): %s @ %s", obs["latency_ms"], obs["objects"], obs["location_label"])
+                    await websocket.send_json({"type": "observation", **obs})
+                except Exception as e:
+                    log.exception("analyze failed")
+                    await websocket.send_json({"type": "error", "detail": f"analyze failed: {e}"})
             elif msg.get("type") == "ping":
                 await websocket.send_json({"type": "pong"})
             else:
