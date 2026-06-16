@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioPlayer, downsampleTo16k, f32ToInt16 } from "./audio.js";
 
-const CAPTURE_INTERVAL_MS = 2000; // Week 1: gentle sampling, just proving the pipe
+const CAPTURE_INTERVAL_MS = 2000;
 const JPEG_QUALITY = 0.6;
-const MAX_WIDTH = 640; // downscale before sending — keeps frames small over the tunnel
+const MAX_WIDTH = 640;
 
-// Derive the WebSocket URL from the page origin so it becomes wss:// through the
-// cloudflared tunnel automatically (no hardcoded LAN IP, no mixed-content).
 function wsUrl() {
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
   return `${proto}://${window.location.host}/ws`;
+}
+
+function fmtTime(ts) {
+  const d = new Date(ts * 1000);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 export default function App() {
@@ -27,16 +30,21 @@ export default function App() {
   const talkingRef = useRef(false);
 
   const [running, setRunning] = useState(false);
-  const [wsState, setWsState] = useState("idle"); // idle | connecting | open | closed
+  const [wsState, setWsState] = useState("idle");
   const [framesSent, setFramesSent] = useState(0);
   const [lastAck, setLastAck] = useState(null);
   const [error, setError] = useState("");
   const [observation, setObservation] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [liveState, setLiveState] = useState("idle"); // idle | open
+  const [liveState, setLiveState] = useState("idle");
   const [talking, setTalking] = useState(false);
   const [userText, setUserText] = useState("");
   const [assistantText, setAssistantText] = useState("");
+
+  // Week 2: memory
+  const [recording, setRecording] = useState(false);
+  const [timeline, setTimeline] = useState([]);
+  const [ingestCount, setIngestCount] = useState(0);
 
   const teardownVoice = useCallback(() => {
     talkingRef.current = false;
@@ -61,6 +69,7 @@ export default function App() {
     }
     setRunning(false);
     setWsState("closed");
+    setRecording(false);
   }, [teardownVoice]);
 
   const grabFrame = useCallback(() => {
@@ -93,7 +102,23 @@ export default function App() {
     ws.send(JSON.stringify({ type: "analyze", ts: Date.now(), data: dataUrl }));
   }, [grabFrame]);
 
-  // Open the Gemini Live voice session. Must run inside a user gesture (audio contexts).
+  const toggleRecord = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (recording) {
+      ws.send(JSON.stringify({ type: "record_stop" }));
+    } else {
+      ws.send(JSON.stringify({ type: "record_start" }));
+    }
+  }, [recording]);
+
+  const deleteEntry = useCallback(async (id) => {
+    try {
+      await fetch(`/memory/${id}`, { method: "DELETE" });
+    } catch { /* ignore */ }
+    setTimeline((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
   const startVoice = useCallback(async () => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -112,12 +137,11 @@ export default function App() {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       const micCtx = new Ctx({ sampleRate: 16000 });
       await micCtx.resume();
-      // served from public/ as a real same-origin file (robust on iOS Safari, unlike data: URLs)
       await micCtx.audioWorklet.addModule("/pcm-worklet.js");
       const source = micCtx.createMediaStreamSource(streamRef.current);
       const node = new AudioWorkletNode(micCtx, "pcm-capture");
       node.port.onmessage = (e) => {
-        if (!talkingRef.current) return; // push-to-talk gate (avoids echo during playback)
+        if (!talkingRef.current) return;
         const w = wsRef.current;
         if (!w || w.readyState !== WebSocket.OPEN) return;
         const i16 = f32ToInt16(downsampleTo16k(e.data, micCtx.sampleRate));
@@ -125,7 +149,7 @@ export default function App() {
       };
       source.connect(node);
       const sink = micCtx.createGain();
-      sink.gain.value = 0; // keep the worklet pulling audio without audible monitoring
+      sink.gain.value = 0;
       node.connect(sink);
       sink.connect(micCtx.destination);
 
@@ -153,7 +177,7 @@ export default function App() {
     setAssistantText("");
     talkingRef.current = true;
     setTalking(true);
-    ws.send(JSON.stringify({ type: "talk_start" })); // manual activity start
+    ws.send(JSON.stringify({ type: "talk_start" }));
   }, []);
 
   const stopTalk = useCallback(() => {
@@ -162,16 +186,15 @@ export default function App() {
     setTalking(false);
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "talk_end" })); // manual activity end -> model replies
+      ws.send(JSON.stringify({ type: "talk_end" }));
     }
   }, []);
 
-  // Must be triggered by a user gesture (iOS Safari blocks camera/autoplay otherwise).
   const start = useCallback(async () => {
     setError("");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }, // rear camera
+        video: { facingMode: "environment" },
         audio: true,
       });
       streamRef.current = stream;
@@ -187,19 +210,41 @@ export default function App() {
         setWsState("open");
         setRunning(true);
         timerRef.current = setInterval(captureFrame, CAPTURE_INTERVAL_MS);
+        // Fetch existing memory timeline
+        fetch("/memory")
+          .then((r) => r.json())
+          .then((entries) => {
+            setTimeline(entries.map((e) => ({
+              ...e,
+              thumbnail: `/thumbnails/${e.id}.jpg`,
+            })));
+          })
+          .catch(() => {});
       };
       ws.onmessage = (ev) => {
-        // Binary = Gemini Live audio (PCM @ 24 kHz) — play it.
         if (ev.data instanceof ArrayBuffer) {
           playerRef.current?.playInt16(ev.data);
           return;
         }
         try {
           const msg = JSON.parse(ev.data);
-          if (msg.type === "ack") setLastAck(msg);
-          else if (msg.type === "observation") {
+          if (msg.type === "ack") {
+            setLastAck(msg);
+          } else if (msg.type === "observation") {
             setObservation(msg);
             setAnalyzing(false);
+          } else if (msg.type === "ingested") {
+            setTimeline((prev) => [{
+              id: msg.id,
+              thumbnail: msg.thumbnail,
+              location_label: msg.location_label,
+              description: msg.description,
+              objects: msg.objects,
+              timestamp: msg.timestamp,
+            }, ...prev]);
+            setIngestCount((n) => n + 1);
+          } else if (msg.type === "record_status") {
+            setRecording(msg.recording);
           } else if (msg.type === "transcript") {
             if (msg.role === "user") setUserText((t) => t + msg.text);
             else setAssistantText((t) => t + msg.text);
@@ -216,6 +261,7 @@ export default function App() {
       ws.onclose = () => {
         setWsState("closed");
         setLiveState("idle");
+        setRecording(false);
       };
       ws.onerror = () => setError("WebSocket error — is the backend running on this origin?");
     } catch (e) {
@@ -236,12 +282,12 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Recall</h1>
-        <p className="tag">your phone is the camera · vision + voice</p>
+        <p className="tag">your phone is the camera · vision + voice + memory</p>
       </header>
 
       {!secure && (
         <div className="warn">
-          ⚠ Not a secure context. The camera will fail over a plain LAN IP — open the
+          Not a secure context. The camera will fail over a plain LAN IP — open the
           <code> https://*.trycloudflare.com </code> tunnel URL instead.
         </div>
       )}
@@ -261,12 +307,24 @@ export default function App() {
             <button className="primary" onClick={analyzeFrame} disabled={analyzing}>
               {analyzing ? "Analyzing…" : "What am I looking at?"}
             </button>
+            <button
+              className={recording ? "record recording" : "record"}
+              onClick={toggleRecord}
+            >
+              {recording ? "⏹ Stop recording" : "⏺ Record memory"}
+            </button>
             <button className="danger" onClick={stop}>
               Stop
             </button>
           </>
         )}
       </div>
+
+      {running && recording && (
+        <div className="ingest-status">
+          Memorizing… {ingestCount > 0 ? `${ingestCount} scene${ingestCount === 1 ? "" : "s"} stored` : "watching for changes"}
+        </div>
+      )}
 
       {running && (
         <div className="voice">
@@ -305,9 +363,7 @@ export default function App() {
           <p className="desc">{observation.description}</p>
           <div className="chips">
             {observation.objects.map((o, i) => (
-              <span key={i} className="chip">
-                {o}
-              </span>
+              <span key={i} className="chip">{o}</span>
             ))}
           </div>
           <div className="latency">Gemini Flash · {observation.latency_ms} ms</div>
@@ -335,9 +391,46 @@ export default function App() {
           <dt>Voice</dt>
           <dd>{liveState === "open" ? (talking ? "listening" : "ready") : "off"}</dd>
         </div>
+        <div>
+          <dt>Memories</dt>
+          <dd>{timeline.length}</dd>
+        </div>
       </dl>
 
       {error && <div className="error">{error}</div>}
+
+      {timeline.length > 0 && (
+        <div className="timeline">
+          <h2 className="timeline-heading">Memory timeline</h2>
+          {timeline.map((entry) => (
+            <div key={entry.id} className="memory-entry">
+              <img
+                className="memory-thumb"
+                src={entry.thumbnail}
+                alt={entry.location_label}
+                loading="lazy"
+              />
+              <div className="memory-meta">
+                <div className="memory-loc">📍 {entry.location_label}</div>
+                <p className="memory-desc">{entry.description}</p>
+                <div className="chips">
+                  {entry.objects.map((o, i) => (
+                    <span key={i} className="chip">{o}</span>
+                  ))}
+                </div>
+                <div className="memory-time">{fmtTime(entry.timestamp)}</div>
+              </div>
+              <button
+                className="memory-delete"
+                onClick={() => deleteEntry(entry.id)}
+                title="Delete"
+              >
+                🗑
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
