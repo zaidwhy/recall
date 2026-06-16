@@ -227,7 +227,7 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Recall</h1>
-        <p className="tag">your phone is the camera · Week 1 capture test</p>
+        <p className="tag">your phone is the camera · vision + voice</p>
       </header>
 
       {!secure && (
