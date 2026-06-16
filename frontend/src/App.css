@@ -1,0 +1,131 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0f1a;
+  --panel: #141b2d;
+  --accent: #6ea8fe;
+  --danger: #ff6b6b;
+  --text: #e8edf7;
+  --muted: #8b97b0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.app {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: max(16px, env(safe-area-inset-top)) 16px 32px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  letter-spacing: 0.5px;
+}
+
+.tag {
+  margin: 2px 0 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.stage {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #25304a;
+}
+
+.stage video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.controls {
+  margin: 16px 0;
+  display: flex;
+  justify-content: center;
+}
+
+button {
+  font-size: 1.05rem;
+  font-weight: 600;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  width: 100%;
+}
+
+button.primary {
+  background: var(--accent);
+  color: #06122b;
+}
+
+button.danger {
+  background: var(--danger);
+  color: #2b0606;
+}
+
+.status {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+}
+
+.status > div {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.status dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status dd {
+  margin: 4px 0 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.warn,
+.error {
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.warn {
+  background: #2a230b;
+  border: 1px solid #5a4a12;
+}
+
+.error {
+  background: #2a0d0d;
+  border: 1px solid #5a1a1a;
+  margin-top: 14px;
+}
+
+code {
+  background: #0006;
+  padding: 1px 5px;
+  border-radius: 5px;
+}
