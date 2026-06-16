@@ -152,6 +152,9 @@ async def ws(websocket: WebSocket) -> None:
             else:
                 await websocket.send_json({"type": "error", "detail": "unknown message type"})
     except WebSocketDisconnect:
+        pass
+    finally:
+        await _stop_live(live, websocket)
         log.info("WS disconnected from %s after %d frames (%.1f KB)", peer, frames, total_bytes / 1024)
 
 
