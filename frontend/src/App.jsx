@@ -172,6 +172,7 @@ export default function App() {
 
       setWsState("connecting");
       const ws = new WebSocket(wsUrl());
+      ws.binaryType = "arraybuffer";
       wsRef.current = ws;
       ws.onopen = () => {
         setWsState("open");
@@ -179,12 +180,22 @@ export default function App() {
         timerRef.current = setInterval(captureFrame, CAPTURE_INTERVAL_MS);
       };
       ws.onmessage = (ev) => {
+        // Binary = Gemini Live audio (PCM @ 24 kHz) — play it.
+        if (ev.data instanceof ArrayBuffer) {
+          playerRef.current?.playInt16(ev.data);
+          return;
+        }
         try {
           const msg = JSON.parse(ev.data);
           if (msg.type === "ack") setLastAck(msg);
           else if (msg.type === "observation") {
             setObservation(msg);
             setAnalyzing(false);
+          } else if (msg.type === "transcript") {
+            if (msg.role === "user") setUserText((t) => t + msg.text);
+            else setAssistantText((t) => t + msg.text);
+          } else if (msg.type === "live_status") {
+            setLiveState(msg.state === "open" ? "open" : "idle");
           } else if (msg.type === "error") {
             setError(msg.detail || "server error");
             setAnalyzing(false);
@@ -193,7 +204,10 @@ export default function App() {
           /* ignore */
         }
       };
-      ws.onclose = () => setWsState("closed");
+      ws.onclose = () => {
+        setWsState("closed");
+        setLiveState("idle");
+      };
       ws.onerror = () => setError("WebSocket error — is the backend running on this origin?");
     } catch (e) {
       setError(
