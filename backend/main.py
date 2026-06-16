@@ -25,6 +25,7 @@ from fastapi.staticfiles import StaticFiles
 load_dotenv()
 
 from . import perception  # noqa: E402  (after load_dotenv so GEMINI_API_KEY is available)
+from .live import run_live  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger("recall")
