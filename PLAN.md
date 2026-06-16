@@ -28,9 +28,12 @@ semantic retrieval via function calling), not "Gemini Live + camera."
 
 ## 2. Tech foundation (verified June 2026)
 
-- **Gemini Live API** (`gemini-2.5-flash-live` / `gemini-3.1-flash-live`) — natively streams
-  video + audio + text in one session (~200ms latency), supports async function calling, has
-  a free tier. Used **only for on-demand voice Q&A**.
+- **Gemini Live API** — model **`gemini-3.1-flash-live-preview`** (verified working on the
+  free tier this session; the earlier-assumed `gemini-2.5-flash-live` id does **not** exist —
+  list Live models via `client.models.list()` filtering `supported_actions` for
+  `bidiGenerateContent`). Natively streams video + audio + text in one session (~200ms
+  latency), supports async function calling, has a free tier. Used **only for on-demand voice
+  Q&A**, with **manual activity detection** (push-to-talk start/end) rather than automatic VAD.
 - **Gemini Flash vision** (standard, generous free RPD) — used for **cheap periodic frame
   ingestion**, not Live.
 - **Free-tier rule (critical):** keep **billing OFF** on the Gemini project — enabling

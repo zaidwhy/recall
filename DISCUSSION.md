@@ -58,7 +58,7 @@ Existing "AI memory" tools (Rewind, Limitless) capture **screen + audio**. Recal
 
 ## 5. Tech foundation (verified June 2026)
 
-- **Gemini Live API** (`gemini-2.5-flash-live` / `gemini-3.1-flash-live`) — natively streams **video + audio + text in one session** (~200ms latency), supports **async function calling/tools**, and has a **free tier**. Strongest multimodal/video breadth, "orders of magnitude cheaper" than OpenAI Realtime. On-brand with the existing Gemini setup.
+- **Gemini Live API** — verified working free-tier model is **`gemini-3.1-flash-live-preview`** (the earlier-assumed `gemini-2.5-flash-live` id does **not** exist). Natively streams **video + audio + text in one session** (~200ms latency), supports **async function calling/tools**, and has a **free tier**. Strongest multimodal/video breadth, "orders of magnitude cheaper" than OpenAI Realtime. On-brand with the existing Gemini setup. (Push-to-talk uses **manual activity detection**, not automatic VAD.)
 - **Free-tier rule (critical):** keep billing **OFF** on the Gemini project — enabling billing deletes the free tier entirely.
 
 ### Decoupled architecture (key design decision from plan review)
