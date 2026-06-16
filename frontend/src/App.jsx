@@ -39,22 +39,35 @@ export default function App() {
     setWsState("closed");
   }, []);
 
-  const captureFrame = useCallback(() => {
+  const grabFrame = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const ws = wsRef.current;
-    if (!video || !canvas || !ws || ws.readyState !== WebSocket.OPEN) return;
-    if (!video.videoWidth) return;
-
+    if (!video || !canvas || !video.videoWidth) return null;
     const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+  }, []);
+
+  const captureFrame = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const dataUrl = grabFrame();
+    if (!dataUrl) return;
     ws.send(JSON.stringify({ type: "frame", ts: Date.now(), data: dataUrl }));
     setFramesSent((n) => n + 1);
-  }, []);
+  }, [grabFrame]);
+
+  const analyzeFrame = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const dataUrl = grabFrame();
+    if (!dataUrl) return;
+    setObservation(null);
+    setAnalyzing(true);
+    ws.send(JSON.stringify({ type: "analyze", ts: Date.now(), data: dataUrl }));
+  }, [grabFrame]);
 
   // Must be triggered by a user gesture (iOS Safari blocks camera/autoplay otherwise).
   const start = useCallback(async () => {
