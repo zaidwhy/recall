@@ -36,10 +36,16 @@ async def run_live(websocket, audio_in: asyncio.Queue) -> None:
     Runs until cancelled (on live_stop / disconnect); the async context closes the
     session cleanly on cancellation.
     """
+    # Manual activity detection: the phone's push-to-talk button delimits each turn
+    # (start on press, end on release). More reliable than automatic VAD, which won't
+    # fire without trailing silence and can clip a speaker who pauses.
     cfg = types.LiveConnectConfig(
         response_modalities=["AUDIO"],
         input_audio_transcription=types.AudioTranscriptionConfig(),
         output_audio_transcription=types.AudioTranscriptionConfig(),
+        realtime_input_config=types.RealtimeInputConfig(
+            automatic_activity_detection=types.AutomaticActivityDetection(disabled=True)
+        ),
         system_instruction=types.Content(parts=[types.Part(text=SYSTEM)]),
     )
     client = _client()
@@ -48,13 +54,24 @@ async def run_live(websocket, audio_in: asyncio.Queue) -> None:
         await websocket.send_json({"type": "live_status", "state": "open"})
 
         async def pump_in() -> None:
-            while True:
-                chunk = await audio_in.get()
-                if chunk is None:
-                    break
-                await session.send_realtime_input(
-                    audio=types.Blob(data=chunk, mime_type="audio/pcm;rate=16000")
-                )
+            # Queue items: b"..." audio | "start" | "end" | None (stop).
+            try:
+                while True:
+                    item = await audio_in.get()
+                    if item is None:
+                        break
+                    if item == "start":
+                        await session.send_realtime_input(activity_start=types.ActivityStart())
+                    elif item == "end":
+                        await session.send_realtime_input(activity_end=types.ActivityEnd())
+                    else:
+                        await session.send_realtime_input(
+                            audio=types.Blob(data=item, mime_type="audio/pcm;rate=16000")
+                        )
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                log.exception("live pump_in failed")
 
         in_task = asyncio.create_task(pump_in())
         try:
