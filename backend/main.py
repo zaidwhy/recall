@@ -150,8 +150,21 @@ async def _ingest_loop(websocket: WebSocket) -> None:
             })
         except asyncio.CancelledError:
             raise
-        except Exception:
-            log.exception("ingestion error (will retry next interval)")
+        except Exception as exc:
+            msg = str(exc)
+            if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+                # Parse retry delay from error message; default to 60s
+                import re
+                m = re.search(r"retry in (\d+)", msg, re.IGNORECASE)
+                wait = int(m.group(1)) + 5 if m else 65
+                log.warning("rate limited by Gemini (gemini-1.5-flash quota); sleeping %ds", wait)
+                try:
+                    await websocket.send_json({"type": "error", "detail": f"Rate limited — pausing ingestion for {wait}s"})
+                except Exception:
+                    pass
+                await asyncio.sleep(wait)
+            else:
+                log.exception("ingestion error (will retry next interval)")
 
 
 # ---------------------------------------------------------------------------
