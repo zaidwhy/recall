@@ -94,7 +94,14 @@ def delete_observation(entry_id: str) -> bool:
     return True
 
 
-def _unpack(ids: list, docs: list, metas: list) -> list[dict]:
+def recall_for_tool(query: str, since: float | None = None, until: float | None = None) -> dict:
+    matches = recall_memory(query, k=3, since=since, until=until)
+    confident = bool(matches) and matches[0]["distance"] is not None and matches[0]["distance"] <= RECALL_MAX_DISTANCE
+    return {"matches": matches, "confident": confident}
+
+
+def _unpack(ids: list, docs: list, metas: list, distances: list | None = None) -> list[dict]:
+    dists = distances if distances is not None else [None] * len(ids)
     return [
         {
             "id": eid,
@@ -102,6 +109,7 @@ def _unpack(ids: list, docs: list, metas: list) -> list[dict]:
             "objects": [o.strip() for o in meta["objects"].split(",") if o.strip()],
             "location_label": meta["location_label"],
             "timestamp": meta["timestamp"],
+            "distance": dist,
         }
-        for eid, doc, meta in zip(ids, docs, metas)
+        for eid, doc, meta, dist in zip(ids, docs, metas, dists)
     ]
