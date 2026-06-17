@@ -28,10 +28,17 @@ All notable changes to this project. Each entry maps to a dev session / week.
   - `.recalled-badge`, `.recalled-x` dismiss button
   - Overrides inside `.recalled` to zero the inner `.memory-entry` border/padding, accent-color the time
 
+### Bug fixes (same session — post-phone-test)
+- **`RECALL_MAX_DISTANCE` raised 1.0 → 1.4** — 1.0 maps to cosine similarity ≥ 0.5, too strict for question-vs-observation matching ("where is my charger" vs. "desk scene with electronic accessories"). 1.4 is just under √2 (fully orthogonal vectors), accepting anything with semantic overlap while still rejecting genuinely unrelated queries
+- **Voice auto-restarts after tool call** — Gemini Live `session.receive()` exhausts after a complete tool-call round-trip; `_runner` now loops: drains stale queue signals and reconnects immediately, keeping voice alive across multiple questions without needing stop/start
+- **Tool call block wrapped in try/except** in `live.py` — prevents a bad `FunctionResponse` or `send_tool_response` error from crashing the entire receive loop
+- **Distance logging** added to `tools.py` — server console prints `top_dist=X.XXX confident=True/False (threshold=1.4)` per query for ongoing calibration
+
 ### Key decisions
 - ChromaDB dispatched via `asyncio.to_thread` — keeps the receive loop non-blocking during the sync embedding+query call
-- `RECALL_MAX_DISTANCE` starts at 1.0 (L2, all-MiniLM-L6-v2) — must be calibrated on first phone test session
+- `RECALL_MAX_DISTANCE = 1.4` (L2, all-MiniLM-L6-v2) — calibrate down toward 1.1 if false positives appear
 - Spotlight card clears on new talk press so it always reflects the current query's match
+- Auto-restart in `_runner` (not in `run_live`) — keeps the queue alive between sessions so audio pump continuity is preserved
 
 ---
 
