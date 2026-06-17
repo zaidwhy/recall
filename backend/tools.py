@@ -44,6 +44,11 @@ def handle_tool_call(name: str, args: dict) -> dict:
     minutes_ago = args.get("minutes_ago")
     since = time.time() - minutes_ago * 60 if minutes_ago else None
     result = memory.recall_for_tool(query, since=since)
+    if result["matches"]:
+        log.info("recall query=%r  top_dist=%.3f  confident=%s  (threshold=%.1f)",
+                 query, result["matches"][0].get("distance"), result["confident"], memory.RECALL_MAX_DISTANCE)
+    else:
+        log.info("recall query=%r  no matches in store", query)
     now = time.time()
     matches = [
         {
