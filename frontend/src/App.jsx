@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AudioPlayer, downsampleTo16k, f32ToInt16 } from "./audio.js";
 
 const CAPTURE_INTERVAL_MS = 2000;
 const JPEG_QUALITY = 0.6;
 const MAX_WIDTH = 640;
-const NARRATE_TIMEOUT_MS = 7000; // auto-stop after 7 s in tap-to-ask mode
+const NARRATE_TIMEOUT_MS = 7000;
 
 function wsUrl() {
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -22,8 +22,6 @@ export default function App() {
   const wsRef = useRef(null);
   const timerRef = useRef(null);
   const streamRef = useRef(null);
-
-  // voice refs
   const micCtxRef = useRef(null);
   const workletRef = useRef(null);
   const micSourceRef = useRef(null);
@@ -46,6 +44,34 @@ export default function App() {
   const [timeline, setTimeline] = useState([]);
   const [ingestCount, setIngestCount] = useState(0);
   const [recalled, setRecalled] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // ── Derived state ────────────────────────────────────────────────────────
+
+  const filteredTimeline = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return timeline;
+    return timeline.filter(e =>
+      e.location_label?.toLowerCase().includes(q) ||
+      e.description?.toLowerCase().includes(q) ||
+      e.objects?.some(o => o.toLowerCase().includes(q))
+    );
+  }, [timeline, searchQuery]);
+
+  // Group by location, sorted by most recent entry per group
+  const groupedTimeline = useMemo(() => {
+    if (!filteredTimeline.length) return [];
+    const groups = new Map();
+    for (const entry of filteredTimeline) {
+      const loc = entry.location_label || "Unknown";
+      if (!groups.has(loc)) groups.set(loc, []);
+      groups.get(loc).push(entry);
+    }
+    return [...groups.entries()].sort(([, a], [, b]) => b[0].timestamp - a[0].timestamp);
+  }, [filteredTimeline]);
+
+  // ── Voice helpers ─────────────────────────────────────────────────────────
 
   const teardownVoice = useCallback(() => {
     clearTimeout(narrateTimerRef.current);
@@ -59,113 +85,6 @@ export default function App() {
     workletRef.current = micSourceRef.current = micCtxRef.current = playerRef.current = null;
     setLiveState("idle");
   }, []);
-
-  const stop = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
-    teardownVoice();
-    if (wsRef.current) wsRef.current.close();
-    wsRef.current = null;
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    setRunning(false);
-    setWsState("closed");
-    setRecording(false);
-  }, [teardownVoice]);
-
-  const grabFrame = useCallback(() => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas || !video.videoWidth) return null;
-    const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
-    canvas.width = Math.round(video.videoWidth * scale);
-    canvas.height = Math.round(video.videoHeight * scale);
-    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", JPEG_QUALITY);
-  }, []);
-
-  const captureFrame = useCallback(() => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    const dataUrl = grabFrame();
-    if (!dataUrl) return;
-    ws.send(JSON.stringify({ type: "frame", ts: Date.now(), data: dataUrl }));
-    setFramesSent((n) => n + 1);
-  }, [grabFrame]);
-
-  const analyzeFrame = useCallback(() => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    const dataUrl = grabFrame();
-    if (!dataUrl) return;
-    setObservation(null);
-    setAnalyzing(true);
-    ws.send(JSON.stringify({ type: "analyze", ts: Date.now(), data: dataUrl }));
-  }, [grabFrame]);
-
-  const toggleRecord = useCallback(() => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: recording ? "record_stop" : "record_start" }));
-  }, [recording]);
-
-  const deleteEntry = useCallback(async (id) => {
-    try { await fetch(`/memory/${id}`, { method: "DELETE" }); } catch { /* ignore */ }
-    setTimeline((prev) => prev.filter((e) => e.id !== id));
-  }, []);
-
-  const startVoice = useCallback(async () => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      setError("Start the camera first — it opens the connection.");
-      return;
-    }
-    if (!streamRef.current) {
-      setError("No microphone stream. Restart the camera (grants mic too).");
-      return;
-    }
-    try {
-      const player = new AudioPlayer(24000);
-      await player.resume();
-      playerRef.current = player;
-
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      const micCtx = new Ctx({ sampleRate: 16000 });
-      await micCtx.resume();
-      await micCtx.audioWorklet.addModule("/pcm-worklet.js");
-      const source = micCtx.createMediaStreamSource(streamRef.current);
-      const node = new AudioWorkletNode(micCtx, "pcm-capture");
-      node.port.onmessage = (e) => {
-        if (!talkingRef.current) return;
-        const w = wsRef.current;
-        if (!w || w.readyState !== WebSocket.OPEN) return;
-        const i16 = f32ToInt16(downsampleTo16k(e.data, micCtx.sampleRate));
-        w.send(i16.buffer);
-      };
-      source.connect(node);
-      const sink = micCtx.createGain();
-      sink.gain.value = 0;
-      node.connect(sink);
-      sink.connect(micCtx.destination);
-
-      micCtxRef.current = micCtx;
-      workletRef.current = node;
-      micSourceRef.current = source;
-
-      ws.send(JSON.stringify({ type: "live_start" }));
-    } catch (e) {
-      setError(`Voice start failed: ${e?.message || e}`);
-      teardownVoice();
-    }
-  }, [teardownVoice]);
-
-  const endVoice = useCallback(() => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "live_stop" }));
-    teardownVoice();
-  }, [teardownVoice]);
 
   const startTalk = useCallback(() => {
     const ws = wsRef.current;
@@ -187,7 +106,6 @@ export default function App() {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "talk_end" }));
   }, []);
 
-  // Tap-to-ask: single tap starts, auto-stops after NARRATE_TIMEOUT_MS, or tap again to stop early.
   const narrate = useCallback(() => {
     if (talkingRef.current) {
       clearTimeout(narrateTimerRef.current);
@@ -202,6 +120,118 @@ export default function App() {
     }
   }, [startTalk, stopTalk]);
 
+  // ── WebSocket setup (extracted so reconnect can reuse the same handlers) ──
+
+  const setupWs = useCallback((ws) => {
+    ws.binaryType = "arraybuffer";
+    wsRef.current = ws;
+    setWsState("connecting");
+
+    ws.onopen = () => {
+      setWsState("open");
+      if (!timerRef.current) {
+        timerRef.current = setInterval(() => {
+          const w = wsRef.current;
+          if (!w || w.readyState !== WebSocket.OPEN) return;
+          const canvas = canvasRef.current;
+          const video = videoRef.current;
+          if (!video || !canvas || !video.videoWidth) return;
+          const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
+          canvas.width = Math.round(video.videoWidth * scale);
+          canvas.height = Math.round(video.videoHeight * scale);
+          canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+          w.send(JSON.stringify({ type: "frame", ts: Date.now(), data: dataUrl }));
+          setFramesSent(n => n + 1);
+        }, CAPTURE_INTERVAL_MS);
+      }
+      fetch("/memory")
+        .then(r => r.json())
+        .then(entries => setTimeline(entries.map(e => ({ ...e, thumbnail: `/thumbnails/${e.id}.jpg` }))))
+        .catch(() => {});
+    };
+
+    ws.onmessage = (ev) => {
+      if (ev.data instanceof ArrayBuffer) {
+        playerRef.current?.playInt16(ev.data);
+        return;
+      }
+      try {
+        const msg = JSON.parse(ev.data);
+        switch (msg.type) {
+          case "ack":
+            setLastAck(msg);
+            break;
+          case "observation":
+            setObservation(msg);
+            setAnalyzing(false);
+            break;
+          case "ingested":
+            setTimeline(prev => [{
+              id: msg.id, thumbnail: msg.thumbnail,
+              location_label: msg.location_label, description: msg.description,
+              objects: msg.objects, timestamp: msg.timestamp,
+            }, ...prev]);
+            setIngestCount(n => n + 1);
+            break;
+          case "updated":
+            // Refresh an existing card in-place with the latest frame + description
+            setTimeline(prev => prev.map(e => e.id === msg.id
+              ? { ...e, description: msg.description, objects: msg.objects, timestamp: msg.timestamp, thumbnail: msg.thumbnail + "?t=" + Date.now() }
+              : e
+            ));
+            break;
+          case "record_status":
+            setRecording(msg.recording);
+            break;
+          case "transcript":
+            if (msg.role === "user") setUserText(t => t + msg.text);
+            else setAssistantText(t => t + msg.text);
+            break;
+          case "recalled":
+            setRecalled(msg.match);
+            break;
+          case "live_status":
+            setLiveState(msg.state === "open" ? "open" : "idle");
+            break;
+          case "error":
+            setError(msg.detail || "server error");
+            setAnalyzing(false);
+            break;
+        }
+      } catch { /* ignore */ }
+    };
+
+    ws.onclose = () => {
+      setWsState("closed");
+      setLiveState("idle");
+      setRecording(false);
+    };
+
+    ws.onerror = () => setError("WebSocket error — is the backend running on this origin?");
+  }, []);
+
+  const reconnectWs = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.onclose = null;
+      wsRef.current.close();
+    }
+    setError("");
+    setupWs(new WebSocket(wsUrl()));
+  }, [setupWs]);
+
+  // ── Camera + WS startup ───────────────────────────────────────────────────
+
+  const stop = useCallback(() => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    teardownVoice();
+    if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close(); wsRef.current = null; }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
+    setRunning(false);
+    setWsState("closed");
+    setRecording(false);
+  }, [teardownVoice]);
+
   const start = useCallback(async () => {
     setError("");
     try {
@@ -213,76 +243,98 @@ export default function App() {
       const video = videoRef.current;
       video.srcObject = stream;
       await video.play();
-
-      setWsState("connecting");
-      const ws = new WebSocket(wsUrl());
-      ws.binaryType = "arraybuffer";
-      wsRef.current = ws;
-      ws.onopen = () => {
-        setWsState("open");
-        setRunning(true);
-        timerRef.current = setInterval(captureFrame, CAPTURE_INTERVAL_MS);
-        fetch("/memory")
-          .then((r) => r.json())
-          .then((entries) => {
-            setTimeline(entries.map((e) => ({ ...e, thumbnail: `/thumbnails/${e.id}.jpg` })));
-          })
-          .catch(() => {});
-      };
-      ws.onmessage = (ev) => {
-        if (ev.data instanceof ArrayBuffer) {
-          playerRef.current?.playInt16(ev.data);
-          return;
-        }
-        try {
-          const msg = JSON.parse(ev.data);
-          if (msg.type === "ack") {
-            setLastAck(msg);
-          } else if (msg.type === "observation") {
-            setObservation(msg);
-            setAnalyzing(false);
-          } else if (msg.type === "ingested") {
-            setTimeline((prev) => [{
-              id: msg.id,
-              thumbnail: msg.thumbnail,
-              location_label: msg.location_label,
-              description: msg.description,
-              objects: msg.objects,
-              timestamp: msg.timestamp,
-            }, ...prev]);
-            setIngestCount((n) => n + 1);
-          } else if (msg.type === "record_status") {
-            setRecording(msg.recording);
-          } else if (msg.type === "transcript") {
-            if (msg.role === "user") setUserText((t) => t + msg.text);
-            else setAssistantText((t) => t + msg.text);
-          } else if (msg.type === "recalled") {
-            setRecalled(msg.match);
-          } else if (msg.type === "live_status") {
-            setLiveState(msg.state === "open" ? "open" : "idle");
-          } else if (msg.type === "error") {
-            setError(msg.detail || "server error");
-            setAnalyzing(false);
-          }
-        } catch { /* ignore */ }
-      };
-      ws.onclose = () => {
-        setWsState("closed");
-        setLiveState("idle");
-        setRecording(false);
-      };
-      ws.onerror = () => setError("WebSocket error — is the backend running on this origin?");
+      setRunning(true);
+      setupWs(new WebSocket(wsUrl()));
     } catch (e) {
       setError(
         e?.name === "NotAllowedError"
           ? "Camera/mic permission denied. Grant access and retry."
-          : `Could not start camera: ${e?.message || e}. (Needs HTTPS — use the tunnel URL.)`
+          : `Could not start: ${e?.message || e}. (Needs HTTPS — use the tunnel URL.)`
       );
       stop();
     }
-  }, [captureFrame, stop]);
+  }, [setupWs, stop]);
+
+  // ── Other actions ─────────────────────────────────────────────────────────
+
+  const grabFrame = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || !video.videoWidth) return null;
+    const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+  }, []);
+
+  const analyzeFrame = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const dataUrl = grabFrame();
+    if (!dataUrl) return;
+    setObservation(null);
+    setAnalyzing(true);
+    ws.send(JSON.stringify({ type: "analyze", ts: Date.now(), data: dataUrl }));
+  }, [grabFrame]);
+
+  const toggleRecord = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: recording ? "record_stop" : "record_start" }));
+  }, [recording]);
+
+  const deleteEntry = useCallback(async (id) => {
+    try { await fetch(`/memory/${id}`, { method: "DELETE" }); } catch { /* ignore */ }
+    setTimeline(prev => prev.filter(e => e.id !== id));
+  }, []);
+
+  const startVoice = useCallback(async () => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) { setError("Start the camera first."); return; }
+    if (!streamRef.current) { setError("No microphone stream. Restart the camera."); return; }
+    try {
+      const player = new AudioPlayer(24000);
+      await player.resume();
+      playerRef.current = player;
+
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const micCtx = new Ctx({ sampleRate: 16000 });
+      await micCtx.resume();
+      await micCtx.audioWorklet.addModule("/pcm-worklet.js");
+      const source = micCtx.createMediaStreamSource(streamRef.current);
+      const node = new AudioWorkletNode(micCtx, "pcm-capture");
+      node.port.onmessage = (e) => {
+        if (!talkingRef.current) return;
+        const w = wsRef.current;
+        if (!w || w.readyState !== WebSocket.OPEN) return;
+        w.send(f32ToInt16(downsampleTo16k(e.data, micCtx.sampleRate)).buffer);
+      };
+      source.connect(node);
+      const sink = micCtx.createGain();
+      sink.gain.value = 0;
+      node.connect(sink);
+      sink.connect(micCtx.destination);
+      micCtxRef.current = micCtx;
+      workletRef.current = node;
+      micSourceRef.current = source;
+
+      ws.send(JSON.stringify({ type: "live_start" }));
+    } catch (e) {
+      setError(`Voice start failed: ${e?.message || e}`);
+      teardownVoice();
+    }
+  }, [teardownVoice]);
+
+  const endVoice = useCallback(() => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "live_stop" }));
+    teardownVoice();
+  }, [teardownVoice]);
 
   useEffect(() => () => stop(), [stop]);
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   const secure = window.isSecureContext;
 
@@ -295,30 +347,59 @@ export default function App() {
 
       {!secure && (
         <div className="warn">
-          Not a secure context — camera will fail over a plain LAN IP.
-          Open the <code>https://*.trycloudflare.com</code> tunnel URL instead.
+          Not a secure context — camera will fail. Open the
+          <code> https://*.trycloudflare.com </code> tunnel URL instead.
         </div>
       )}
 
+      {/* Onboarding — shown only before camera starts */}
+      {!running && (
+        <div className="onboarding">
+          <div className="ob-step">
+            <div className="ob-num">1</div>
+            <div className="ob-body">
+              <strong>Start camera</strong>
+              <span>Point your phone at the room</span>
+            </div>
+          </div>
+          <div className="ob-divider" />
+          <div className="ob-step">
+            <div className="ob-num">2</div>
+            <div className="ob-body">
+              <strong>Record memory</strong>
+              <span>Walk around — Recall memorizes what it sees</span>
+            </div>
+          </div>
+          <div className="ob-divider" />
+          <div className="ob-step">
+            <div className="ob-num">3</div>
+            <div className="ob-body">
+              <strong>Ask anything</strong>
+              <span>"Where are my keys?" and get a spoken answer</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Camera */}
       <div className="stage">
         <video ref={videoRef} playsInline autoPlay muted />
         <canvas ref={canvasRef} hidden />
         {running && recording && (
           <div className="recording-pill">
-            <span className="rec-dot" /> REC · {ingestCount} {ingestCount === 1 ? "scene" : "scenes"}
+            <span className="rec-dot" />
+            REC · {ingestCount} {ingestCount === 1 ? "scene" : "scenes"}
           </div>
         )}
       </div>
 
+      {/* Controls */}
       <div className="controls">
         {!running ? (
           <button className="primary" onClick={start}>Start camera</button>
         ) : (
           <>
-            <button
-              className={recording ? "record recording" : "record"}
-              onClick={toggleRecord}
-            >
+            <button className={recording ? "record recording" : "record"} onClick={toggleRecord}>
               {recording ? "⏹ Stop" : "⏺ Record"}
             </button>
             <button className="ghost small" onClick={analyzeFrame} disabled={analyzing}>
@@ -329,12 +410,19 @@ export default function App() {
         )}
       </div>
 
+      {/* Reconnect banner when WS drops while running */}
+      {running && wsState === "closed" && (
+        <div className="ws-banner">
+          Connection lost —
+          <button className="ws-reconnect" onClick={reconnectWs}>Reconnect</button>
+        </div>
+      )}
+
+      {/* Voice */}
       {running && (
         <div className="voice">
           {liveState === "idle" ? (
-            <button className="voice-start" onClick={startVoice}>
-              🎙 Enable voice
-            </button>
+            <button className="voice-start" onClick={startVoice}>🎙 Enable voice</button>
           ) : (
             <div className="ptt-area">
               <button
@@ -342,7 +430,7 @@ export default function App() {
                 onPointerDown={startTalk}
                 onPointerUp={stopTalk}
                 onPointerLeave={stopTalk}
-                onContextMenu={(e) => e.preventDefault()}
+                onContextMenu={e => e.preventDefault()}
                 aria-label={talking ? "Listening — release to send" : "Hold to ask Recall"}
               >
                 <span className="ptt-icon">{talking ? "●" : "🎤"}</span>
@@ -359,6 +447,7 @@ export default function App() {
         </div>
       )}
 
+      {/* Transcript */}
       {(userText || assistantText) && (
         <div className="transcript">
           {userText && <p className="t-you">"{userText}"</p>}
@@ -366,14 +455,20 @@ export default function App() {
         </div>
       )}
 
+      {/* Recalled spotlight */}
       {recalled && (
         <div className="recalled">
           <div className="recalled-badge">
             🧠 Remembered
             <button className="recalled-x" onClick={() => setRecalled(null)}>×</button>
           </div>
-          <div className="memory-entry">
-            <img className="memory-thumb" src={recalled.thumbnail} alt={recalled.location_label} />
+          <div className="memory-entry recalled-entry">
+            <img
+              className="memory-thumb"
+              src={recalled.thumbnail}
+              alt={recalled.location_label}
+              onClick={() => setLightbox(recalled.thumbnail)}
+            />
             <div className="memory-meta">
               <div className="memory-loc">📍 {recalled.location_label}</div>
               <p className="memory-desc">{recalled.description}</p>
@@ -386,6 +481,7 @@ export default function App() {
         </div>
       )}
 
+      {/* On-demand observation */}
       {observation && (
         <div className="observation">
           <div className="loc">📍 {observation.location_label}</div>
@@ -399,35 +495,66 @@ export default function App() {
 
       {error && <div className="error">{error}</div>}
 
+      {/* Memory timeline */}
       {timeline.length > 0 && (
         <div className="timeline">
-          <h2 className="timeline-heading">Memory · {timeline.length}</h2>
-          {timeline.map((entry) => (
-            <div key={entry.id} className="memory-entry">
-              <img
-                className="memory-thumb"
-                src={entry.thumbnail}
-                alt={entry.location_label}
-                loading="lazy"
-              />
-              <div className="memory-meta">
-                <div className="memory-loc">📍 {entry.location_label}</div>
-                <p className="memory-desc">{entry.description}</p>
-                <div className="chips">
-                  {entry.objects.map((o, i) => <span key={i} className="chip">{o}</span>)}
-                </div>
-                <div className="memory-time">{fmtTime(entry.timestamp)}</div>
+          <div className="timeline-header">
+            <h2 className="timeline-heading">Memory · {timeline.length}</h2>
+            <input
+              className="search-input"
+              type="search"
+              placeholder="Search…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {filteredTimeline.length === 0 && (
+            <p className="search-empty">No memories match "{searchQuery}"</p>
+          )}
+
+          {groupedTimeline.map(([loc, entries]) => (
+            <div key={loc} className="location-group">
+              <div className="location-group-header">
+                <span className="lg-dot" />
+                {loc}
+                <span className="lg-count">{entries.length}</span>
               </div>
-              <button
-                className="memory-delete"
-                onClick={() => deleteEntry(entry.id)}
-                title="Delete"
-              >🗑</button>
+              {entries.map(entry => (
+                <div key={entry.id} className="memory-entry">
+                  <img
+                    className="memory-thumb"
+                    src={entry.thumbnail}
+                    alt={entry.location_label}
+                    loading="lazy"
+                    onClick={() => setLightbox(entry.thumbnail)}
+                  />
+                  <div className="memory-meta">
+                    <p className="memory-desc">{entry.description}</p>
+                    <div className="chips">
+                      {entry.objects.map((o, i) => <span key={i} className="chip">{o}</span>)}
+                    </div>
+                    <div className="memory-time">{fmtTime(entry.timestamp)}</div>
+                  </div>
+                  <button className="memory-delete" onClick={() => deleteEntry(entry.id)} title="Delete">
+                    🗑
+                  </button>
+                </div>
+              ))}
             </div>
           ))}
         </div>
       )}
 
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="lightbox" onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="Memory frame" onClick={e => e.stopPropagation()} />
+          <button className="lightbox-close" onClick={() => setLightbox(null)}>×</button>
+        </div>
+      )}
+
+      {/* Debug */}
       <details className="debug">
         <summary>Debug</summary>
         <dl className="status">
