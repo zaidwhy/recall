@@ -178,6 +178,7 @@ export default function App() {
     if (!ws || ws.readyState !== WebSocket.OPEN || talkingRef.current) return;
     setUserText("");
     setAssistantText("");
+    setRecalled(null);
     talkingRef.current = true;
     setTalking(true);
     ws.send(JSON.stringify({ type: "talk_start" }));
