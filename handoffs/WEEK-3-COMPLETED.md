@@ -22,6 +22,9 @@ status: Week 3 code complete; verify on phone + calibrate RECALL_MAX_DISTANCE; W
 | 11 | **Confidence gate** | `recall_for_tool` returns `confident` flag; model told to say "I don't remember" if `confident=false` | ✅ code |
 | 12 | **Temporal filter** | `minutes_ago` param → `since = time.time() - N*60` → `recall_memory(since=...)` | ✅ code |
 | 13 | **Remembered-frame spotlight** | `recalled` WS message → spotlight card above timeline (accent border, slide-in, dismiss ×) | ✅ code |
+| 14 | **Voice auto-restart** | `_runner` loops on session close (receive() exhausts after tool round-trip); drains queue, reconnects immediately | ✅ tested |
+| 15 | **Recall threshold raised** | `RECALL_MAX_DISTANCE` 1.0 → 1.4 (L2); fixes false negatives from strict cosine-similarity gate | ✅ tested |
+| 16 | **Distance logging** | `tools.py` logs `top_dist` + `confident` per query for ongoing threshold calibration | ✅ |
 
 ---
 
