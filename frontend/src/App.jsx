@@ -46,6 +46,8 @@ export default function App() {
   const [recalled, setRecalled] = useState(null);
   const [lightbox, setLightbox] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [flashCalls, setFlashCalls] = useState(0);
+  const [flashBudget, setFlashBudget] = useState(18);
 
   // ── Derived state ────────────────────────────────────────────────────────
 
