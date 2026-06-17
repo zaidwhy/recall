@@ -68,8 +68,9 @@ def recall_memory(
         query_texts=[query],
         n_results=min(k, count),
         where=where,
+        include=["documents", "metadatas", "distances"],
     )
-    return _unpack(results["ids"][0], results["documents"][0], results["metadatas"][0])
+    return _unpack(results["ids"][0], results["documents"][0], results["metadatas"][0], results["distances"][0])
 
 
 def list_all(limit: int = 200) -> list[dict]:
