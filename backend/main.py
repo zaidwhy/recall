@@ -38,8 +38,13 @@ THUMBS_DIR = DATA_DIR / "thumbnails"
 DATA_DIR.mkdir(exist_ok=True)
 THUMBS_DIR.mkdir(exist_ok=True)
 
-# Minimum seconds between Flash calls during always-on ingestion (quota guard).
+# Poll interval for the ingest loop. Flash is only called when the scene actually
+# changes AND the minimum gap has elapsed — so this is the check frequency, not the call rate.
 INGEST_INTERVAL_S = 5
+
+# Hard floor between Gemini Flash calls (vision + analyze combined).
+# gemini-1.5-flash free tier: 15 RPM / 1500 RPD. 30s floor → max 2/min, 120/hr, well within limits.
+FLASH_MIN_GAP_S = 30
 
 
 # ---------------------------------------------------------------------------
