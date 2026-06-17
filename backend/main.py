@@ -30,6 +30,12 @@ from .live import run_live  # noqa: E402
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger("recall")
 
+# Tracks the last time we made a Gemini Flash call (vision model).
+# Shared across the ingest loop and the on-demand analyze handler.
+_last_flash_call: float = 0.0
+
+log.info("Vision model: %s  (min gap: %ds)", perception.VISION_MODEL, FLASH_MIN_GAP_S)
+
 app = FastAPI(title="Recall", version="0.2.0")
 
 DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
