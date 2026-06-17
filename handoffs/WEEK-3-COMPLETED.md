@@ -28,9 +28,9 @@ status: Week 3 code complete; verify on phone + calibrate RECALL_MAX_DISTANCE; W
 
 ---
 
-## CRITICAL: calibrate RECALL_MAX_DISTANCE
+## Calibrate RECALL_MAX_DISTANCE (ongoing)
 
-The confidence gate threshold in `backend/memory.py` is set to `1.0` (L2, `all-MiniLM-L6-v2`). This is a starting guess. Before tagging `week-3`:
+Threshold is now `1.4` (raised from `1.0` after first phone test — was causing false negatives). Distance logging is live in the server console. To fine-tune:
 
 1. Temporarily add `log.info("distance: %s", result['matches'][0]['distance'] if result['matches'] else 'no match')` in `handle_tool_call`
 2. Record a few scenes (charger on desk, kettle, etc.)
