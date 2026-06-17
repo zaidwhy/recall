@@ -478,16 +478,16 @@ export default function App() {
             <img
               className="memory-thumb"
               src={recalled.thumbnail}
-              alt={recalled.location_label}
+              alt={recalled.location}
               onClick={() => setLightbox(recalled.thumbnail)}
             />
             <div className="memory-meta">
-              <div className="memory-loc">📍 {recalled.location_label}</div>
-              <p className="memory-desc">{recalled.description}</p>
+              <div className="memory-loc">📍 {recalled.location}</div>
+              <p className="memory-desc">{recalled.scene_description}</p>
               <div className="chips">
-                {recalled.objects.map((o, i) => <span key={i} className="chip">{o}</span>)}
+                {(recalled.objects_visible ?? []).map((o, i) => <span key={i} className="chip">{o}</span>)}
               </div>
-              <div className="memory-time">~{recalled.minutes_ago} min ago</div>
+              <div className="memory-time">{recalled.time_ago}</div>
             </div>
           </div>
         </div>
