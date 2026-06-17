@@ -212,16 +212,25 @@ async def ws(websocket: WebSocket) -> None:
                     live["queue"] = new_q
 
                     async def _runner(q: asyncio.Queue = new_q) -> None:
-                        try:
-                            await run_live(websocket, q)
-                        except asyncio.CancelledError:
-                            pass
-                        except Exception as e:
-                            log.exception("live session error")
+                        while True:
                             try:
-                                await websocket.send_json({"type": "error", "detail": f"live: {e}"})
-                            except Exception:
-                                pass
+                                await run_live(websocket, q)
+                                log.info("live session ended cleanly; reconnecting")
+                            except asyncio.CancelledError:
+                                break
+                            except Exception as e:
+                                log.exception("live session error; reconnecting in 2s")
+                                try:
+                                    await websocket.send_json({"type": "error", "detail": f"live: {e}"})
+                                except Exception:
+                                    pass
+                                await asyncio.sleep(2)
+                            # Drain stale activity_start/end signals before reconnect
+                            while not q.empty():
+                                try:
+                                    q.get_nowait()
+                                except asyncio.QueueEmpty:
+                                    break
 
                     live["task"] = asyncio.create_task(_runner())
                     log.info("live_start")
