@@ -175,13 +175,14 @@ export default function App() {
               objects: msg.objects, timestamp: msg.timestamp,
             }, ...prev]);
             setIngestCount(n => n + 1);
+            if (msg.flash_calls != null) { setFlashCalls(msg.flash_calls); setFlashBudget(msg.flash_budget); }
             break;
           case "updated":
-            // Refresh an existing card in-place with the latest frame + description
             setTimeline(prev => prev.map(e => e.id === msg.id
               ? { ...e, description: msg.description, objects: msg.objects, timestamp: msg.timestamp, thumbnail: msg.thumbnail + "?t=" + Date.now() }
               : e
             ));
+            if (msg.flash_calls != null) { setFlashCalls(msg.flash_calls); setFlashBudget(msg.flash_budget); }
             break;
           case "record_status":
             setRecording(msg.recording);
