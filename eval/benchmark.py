@@ -281,6 +281,11 @@ def update_readme(report: str, readme: Path = README) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    import sys
+    # Windows Git Bash / cp1252 consoles can't print ✓/✗ — force UTF-8 if possible
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     ap = argparse.ArgumentParser(description="Recall eval benchmark")
     ap.add_argument("--dry-run", action="store_true", help="Print report; do not update README")
     ap.add_argument("--k", type=int, default=3, help="Top-k cutoff (default 3)")
@@ -288,7 +293,7 @@ def main() -> None:
 
     n_cases = len(CASES)
     n_dist = len(DISTRACTORS)
-    print(f"Staging {n_cases} target observations + {n_dist} distractors … ", end="", flush=True)
+    print(f"Staging {n_cases} target observations + {n_dist} distractors ... ", end="", flush=True)
     results = run_benchmark(k=args.k)
     print("done.\n")
 
