@@ -82,21 +82,26 @@ async def run_live(websocket, audio_in: asyncio.Queue) -> None:
                 if r.data:
                     await websocket.send_bytes(r.data)  # PCM @ 24 kHz to the phone
                 if getattr(r, "tool_call", None):
-                    responses = []
-                    for fc in r.tool_call.function_calls:
-                        result = await asyncio.to_thread(
-                            tools.handle_tool_call, fc.name, dict(fc.args or {})
-                        )
-                        responses.append(
-                            types.FunctionResponse(id=fc.id, name=fc.name, response=result)
-                        )
-                        if result.get("confident") and result.get("matches"):
-                            top = result["matches"][0]
-                            await websocket.send_json({
-                                "type": "recalled",
-                                "match": {**top, "thumbnail": f"/thumbnails/{top['id']}.jpg"},
-                            })
-                    await session.send_tool_response(function_responses=responses)
+                    try:
+                        responses = []
+                        for fc in r.tool_call.function_calls:
+                            result = await asyncio.to_thread(
+                                tools.handle_tool_call, fc.name, dict(fc.args or {})
+                            )
+                            responses.append(
+                                types.FunctionResponse(id=fc.id, name=fc.name, response=result)
+                            )
+                            if result.get("confident") and result.get("matches"):
+                                top = result["matches"][0]
+                                await websocket.send_json({
+                                    "type": "recalled",
+                                    "match": {**top, "thumbnail": f"/thumbnails/{top['id']}.jpg"},
+                                })
+                        await session.send_tool_response(function_responses=responses)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        log.exception("tool call handling failed")
                 sc = getattr(r, "server_content", None)
                 if sc:
                     ot = getattr(sc, "output_transcription", None)
