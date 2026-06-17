@@ -36,26 +36,42 @@ RECALL_TOOL = types.Tool(function_declarations=[
 ])
 
 
+def _format_time(minutes_ago: int) -> str:
+    if minutes_ago < 1:
+        return "just now"
+    if minutes_ago < 60:
+        return f"{minutes_ago} minute{'s' if minutes_ago != 1 else ''} ago"
+    hours = round(minutes_ago / 60)
+    if hours < 24:
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+    days = round(hours / 24)
+    return f"{days} day{'s' if days != 1 else ''} ago"
+
+
 def handle_tool_call(name: str, args: dict) -> dict:
-    """Execute a tool call from the Live model. Returns a small, speakable result dict."""
+    """Execute a tool call from the Live model. Returns a speakable result dict."""
     if name != "recall_memory":
         return {"error": f"unknown tool {name}"}
+
     query = args.get("query", "")
     minutes_ago = args.get("minutes_ago")
     since = time.time() - minutes_ago * 60 if minutes_ago else None
+
     result = memory.recall_for_tool(query, since=since)
+
     if result["matches"]:
         log.info("recall query=%r  top_dist=%.3f  confident=%s  (threshold=%.1f)",
                  query, result["matches"][0].get("distance"), result["confident"], memory.RECALL_MAX_DISTANCE)
     else:
         log.info("recall query=%r  no matches in store", query)
+
     now = time.time()
     matches = [
         {
-            "location_label": m["location_label"],
-            "description": m["description"],
-            "objects": m["objects"],
-            "minutes_ago": round((now - m["timestamp"]) / 60),
+            "location": m["location_label"],
+            "scene_description": m["description"],
+            "objects_visible": m["objects"],
+            "time_ago": _format_time(round((now - m["timestamp"]) / 60)),
             "id": m["id"],
         }
         for m in result["matches"]
