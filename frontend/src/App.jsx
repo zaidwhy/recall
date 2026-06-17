@@ -4,6 +4,7 @@ import { AudioPlayer, downsampleTo16k, f32ToInt16 } from "./audio.js";
 const CAPTURE_INTERVAL_MS = 2000;
 const JPEG_QUALITY = 0.6;
 const MAX_WIDTH = 640;
+const NARRATE_TIMEOUT_MS = 7000; // auto-stop after 7 s in tap-to-ask mode
 
 function wsUrl() {
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -12,7 +13,7 @@ function wsUrl() {
 
 function fmtTime(ts) {
   const d = new Date(ts * 1000);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function App() {
@@ -22,12 +23,13 @@ export default function App() {
   const timerRef = useRef(null);
   const streamRef = useRef(null);
 
-  // voice (Gemini Live) refs
+  // voice refs
   const micCtxRef = useRef(null);
   const workletRef = useRef(null);
   const micSourceRef = useRef(null);
   const playerRef = useRef(null);
   const talkingRef = useRef(false);
+  const narrateTimerRef = useRef(null);
 
   const [running, setRunning] = useState(false);
   const [wsState, setWsState] = useState("idle");
@@ -40,16 +42,14 @@ export default function App() {
   const [talking, setTalking] = useState(false);
   const [userText, setUserText] = useState("");
   const [assistantText, setAssistantText] = useState("");
-
-  // Week 2: memory
   const [recording, setRecording] = useState(false);
   const [timeline, setTimeline] = useState([]);
   const [ingestCount, setIngestCount] = useState(0);
-
-  // Week 3: spotlight card for the last recalled frame
   const [recalled, setRecalled] = useState(null);
 
   const teardownVoice = useCallback(() => {
+    clearTimeout(narrateTimerRef.current);
+    narrateTimerRef.current = null;
     talkingRef.current = false;
     setTalking(false);
     try { workletRef.current?.disconnect(); } catch { /* ignore */ }
@@ -108,17 +108,11 @@ export default function App() {
   const toggleRecord = useCallback(() => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    if (recording) {
-      ws.send(JSON.stringify({ type: "record_stop" }));
-    } else {
-      ws.send(JSON.stringify({ type: "record_start" }));
-    }
+    ws.send(JSON.stringify({ type: recording ? "record_stop" : "record_start" }));
   }, [recording]);
 
   const deleteEntry = useCallback(async (id) => {
-    try {
-      await fetch(`/memory/${id}`, { method: "DELETE" });
-    } catch { /* ignore */ }
+    try { await fetch(`/memory/${id}`, { method: "DELETE" }); } catch { /* ignore */ }
     setTimeline((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
@@ -181,6 +175,7 @@ export default function App() {
     setRecalled(null);
     talkingRef.current = true;
     setTalking(true);
+    navigator.vibrate?.(20);
     ws.send(JSON.stringify({ type: "talk_start" }));
   }, []);
 
@@ -189,10 +184,23 @@ export default function App() {
     talkingRef.current = false;
     setTalking(false);
     const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "talk_end" }));
-    }
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "talk_end" }));
   }, []);
+
+  // Tap-to-ask: single tap starts, auto-stops after NARRATE_TIMEOUT_MS, or tap again to stop early.
+  const narrate = useCallback(() => {
+    if (talkingRef.current) {
+      clearTimeout(narrateTimerRef.current);
+      narrateTimerRef.current = null;
+      stopTalk();
+    } else {
+      startTalk();
+      narrateTimerRef.current = setTimeout(() => {
+        stopTalk();
+        narrateTimerRef.current = null;
+      }, NARRATE_TIMEOUT_MS);
+    }
+  }, [startTalk, stopTalk]);
 
   const start = useCallback(async () => {
     setError("");
@@ -214,14 +222,10 @@ export default function App() {
         setWsState("open");
         setRunning(true);
         timerRef.current = setInterval(captureFrame, CAPTURE_INTERVAL_MS);
-        // Fetch existing memory timeline
         fetch("/memory")
           .then((r) => r.json())
           .then((entries) => {
-            setTimeline(entries.map((e) => ({
-              ...e,
-              thumbnail: `/thumbnails/${e.id}.jpg`,
-            })));
+            setTimeline(entries.map((e) => ({ ...e, thumbnail: `/thumbnails/${e.id}.jpg` })));
           })
           .catch(() => {});
       };
@@ -260,9 +264,7 @@ export default function App() {
             setError(msg.detail || "server error");
             setAnalyzing(false);
           }
-        } catch {
-          /* ignore */
-        }
+        } catch { /* ignore */ }
       };
       ws.onclose = () => {
         setWsState("closed");
@@ -274,7 +276,7 @@ export default function App() {
       setError(
         e?.name === "NotAllowedError"
           ? "Camera/mic permission denied. Grant access and retry."
-          : `Could not start camera: ${e?.message || e}. (Camera needs HTTPS — use the tunnel URL, not a LAN IP.)`
+          : `Could not start camera: ${e?.message || e}. (Needs HTTPS — use the tunnel URL.)`
       );
       stop();
     }
@@ -288,122 +290,81 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Recall</h1>
-        <p className="tag">your phone is the camera · vision + voice + memory</p>
+        <p className="tag">see once · remember always</p>
       </header>
 
       {!secure && (
         <div className="warn">
-          Not a secure context. The camera will fail over a plain LAN IP — open the
-          <code> https://*.trycloudflare.com </code> tunnel URL instead.
+          Not a secure context — camera will fail over a plain LAN IP.
+          Open the <code>https://*.trycloudflare.com</code> tunnel URL instead.
         </div>
       )}
 
       <div className="stage">
         <video ref={videoRef} playsInline autoPlay muted />
         <canvas ref={canvasRef} hidden />
+        {running && recording && (
+          <div className="recording-pill">
+            <span className="rec-dot" /> REC · {ingestCount} {ingestCount === 1 ? "scene" : "scenes"}
+          </div>
+        )}
       </div>
 
       <div className="controls">
         {!running ? (
-          <button className="primary" onClick={start}>
-            Start camera
-          </button>
+          <button className="primary" onClick={start}>Start camera</button>
         ) : (
           <>
-            <button className="primary" onClick={analyzeFrame} disabled={analyzing}>
-              {analyzing ? "Analyzing…" : "What am I looking at?"}
-            </button>
             <button
               className={recording ? "record recording" : "record"}
               onClick={toggleRecord}
             >
-              {recording ? "⏹ Stop recording" : "⏺ Record memory"}
+              {recording ? "⏹ Stop" : "⏺ Record"}
             </button>
-            <button className="danger" onClick={stop}>
-              Stop
+            <button className="ghost small" onClick={analyzeFrame} disabled={analyzing}>
+              {analyzing ? "…" : "Analyze"}
             </button>
+            <button className="danger small" onClick={stop}>End</button>
           </>
         )}
       </div>
 
-      {running && recording && (
-        <div className="ingest-status">
-          Memorizing… {ingestCount > 0 ? `${ingestCount} scene${ingestCount === 1 ? "" : "s"} stored` : "watching for changes"}
-        </div>
-      )}
-
       {running && (
         <div className="voice">
           {liveState === "idle" ? (
-            <button className="ghost" onClick={startVoice}>
-              🎙 Start voice
+            <button className="voice-start" onClick={startVoice}>
+              🎙 Enable voice
             </button>
           ) : (
-            <>
+            <div className="ptt-area">
               <button
-                className={talking ? "talk talking" : "talk"}
+                className={`ptt${talking ? " ptt--active" : ""}`}
                 onPointerDown={startTalk}
                 onPointerUp={stopTalk}
                 onPointerLeave={stopTalk}
                 onContextMenu={(e) => e.preventDefault()}
+                aria-label={talking ? "Listening — release to send" : "Hold to ask Recall"}
               >
-                {talking ? "🔴 Listening… (release to send)" : "🎤 Hold to talk"}
+                <span className="ptt-icon">{talking ? "●" : "🎤"}</span>
+                <span className="ptt-label">{talking ? "Listening…" : "Hold to ask"}</span>
               </button>
-              <button className="ghost" onClick={endVoice}>
-                End voice
-              </button>
-            </>
-          )}
-          {(userText || assistantText) && (
-            <div className="caption">
-              {userText && <p className="you">You: {userText}</p>}
-              {assistantText && <p className="recall">Recall: {assistantText}</p>}
+              <div className="ptt-actions">
+                <button className="tap-ask" onClick={narrate}>
+                  {talking ? "⏹ Done" : "Tap to ask"}
+                </button>
+                <button className="ghost small" onClick={endVoice}>End voice</button>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {observation && (
-        <div className="observation">
-          <div className="loc">📍 {observation.location_label}</div>
-          <p className="desc">{observation.description}</p>
-          <div className="chips">
-            {observation.objects.map((o, i) => (
-              <span key={i} className="chip">{o}</span>
-            ))}
-          </div>
-          <div className="latency">Gemini Flash · {observation.latency_ms} ms</div>
+      {(userText || assistantText) && (
+        <div className="transcript">
+          {userText && <p className="t-you">"{userText}"</p>}
+          {assistantText && <p className="t-recall">{assistantText}</p>}
         </div>
       )}
-
-      <dl className="status">
-        <div>
-          <dt>Secure context</dt>
-          <dd>{secure ? "✅ yes" : "❌ no"}</dd>
-        </div>
-        <div>
-          <dt>WebSocket</dt>
-          <dd>{wsState}</dd>
-        </div>
-        <div>
-          <dt>Frames sent</dt>
-          <dd>{framesSent}</dd>
-        </div>
-        <div>
-          <dt>Last ack</dt>
-          <dd>{lastAck ? `#${lastAck.frame} · ${(lastAck.bytes / 1024).toFixed(1)} KB` : "—"}</dd>
-        </div>
-        <div>
-          <dt>Voice</dt>
-          <dd>{liveState === "open" ? (talking ? "listening" : "ready") : "off"}</dd>
-        </div>
-        <div>
-          <dt>Memories</dt>
-          <dd>{timeline.length}</dd>
-        </div>
-      </dl>
-
-      {error && <div className="error">{error}</div>}
 
       {recalled && (
         <div className="recalled">
@@ -425,9 +386,22 @@ export default function App() {
         </div>
       )}
 
+      {observation && (
+        <div className="observation">
+          <div className="loc">📍 {observation.location_label}</div>
+          <p className="desc">{observation.description}</p>
+          <div className="chips">
+            {observation.objects.map((o, i) => <span key={i} className="chip">{o}</span>)}
+          </div>
+          <div className="latency">Gemini Flash · {observation.latency_ms} ms</div>
+        </div>
+      )}
+
+      {error && <div className="error">{error}</div>}
+
       {timeline.length > 0 && (
         <div className="timeline">
-          <h2 className="timeline-heading">Memory timeline</h2>
+          <h2 className="timeline-heading">Memory · {timeline.length}</h2>
           {timeline.map((entry) => (
             <div key={entry.id} className="memory-entry">
               <img
@@ -440,9 +414,7 @@ export default function App() {
                 <div className="memory-loc">📍 {entry.location_label}</div>
                 <p className="memory-desc">{entry.description}</p>
                 <div className="chips">
-                  {entry.objects.map((o, i) => (
-                    <span key={i} className="chip">{o}</span>
-                  ))}
+                  {entry.objects.map((o, i) => <span key={i} className="chip">{o}</span>)}
                 </div>
                 <div className="memory-time">{fmtTime(entry.timestamp)}</div>
               </div>
@@ -450,13 +422,23 @@ export default function App() {
                 className="memory-delete"
                 onClick={() => deleteEntry(entry.id)}
                 title="Delete"
-              >
-                🗑
-              </button>
+              >🗑</button>
             </div>
           ))}
         </div>
       )}
+
+      <details className="debug">
+        <summary>Debug</summary>
+        <dl className="status">
+          <div><dt>Secure</dt><dd>{secure ? "✅" : "❌"}</dd></div>
+          <div><dt>WebSocket</dt><dd>{wsState}</dd></div>
+          <div><dt>Frames</dt><dd>{framesSent}</dd></div>
+          <div><dt>Last ack</dt><dd>{lastAck ? `#${lastAck.frame} · ${(lastAck.bytes / 1024).toFixed(1)} KB` : "—"}</dd></div>
+          <div><dt>Voice</dt><dd>{liveState === "open" ? (talking ? "listening" : "ready") : "off"}</dd></div>
+          <div><dt>Memories</dt><dd>{timeline.length}</dd></div>
+        </dl>
+      </details>
     </div>
   );
 }
