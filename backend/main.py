@@ -172,6 +172,8 @@ async def _ingest_loop(websocket: WebSocket) -> None:
                 "description": obs["description"],
                 "timestamp": obs["timestamp"],
                 "latency_ms": obs["latency_ms"],
+                "flash_calls": _flash_calls_today,
+                "flash_budget": FLASH_DAILY_BUDGET,
             })
         except asyncio.CancelledError:
             raise
