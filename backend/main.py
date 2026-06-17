@@ -135,10 +135,11 @@ async def _ingest_loop(websocket: WebSocket) -> None:
             if not changed:
                 continue
             obs = await asyncio.to_thread(perception.analyze_frame, jpeg)
-            entry_id = await asyncio.to_thread(memory.log_observation, obs, jpeg)
-            log.info("ingested %s @ %s…", obs["location_label"], entry_id[:8])
+            entry_id, is_new = await asyncio.to_thread(memory.log_observation, obs, jpeg)
+            action = "ingested" if is_new else "updated"
+            log.info("%s %s @ %s…", action, obs["location_label"], entry_id[:8])
             await websocket.send_json({
-                "type": "ingested",
+                "type": action,
                 "id": entry_id,
                 "thumbnail": f"/thumbnails/{entry_id}.jpg",
                 "objects": obs["objects"],
