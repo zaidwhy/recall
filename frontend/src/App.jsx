@@ -395,9 +395,12 @@ export default function App() {
         <video ref={videoRef} playsInline autoPlay muted />
         <canvas ref={canvasRef} hidden />
         {running && recording && (
-          <div className="recording-pill">
+          <div className={`recording-pill${flashCalls >= flashBudget ? " budget-warn" : ""}`}>
             <span className="rec-dot" />
             REC · {ingestCount} {ingestCount === 1 ? "scene" : "scenes"}
+            {flashCalls > 0 && (
+              <span className="flash-budget"> · {flashBudget - flashCalls} calls left</span>
+            )}
           </div>
         )}
       </div>
