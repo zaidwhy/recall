@@ -32,12 +32,11 @@ status: Week 3 code complete; verify on phone + calibrate RECALL_MAX_DISTANCE; W
 
 Threshold is now `1.4` (raised from `1.0` after first phone test — was causing false negatives). Distance logging is live in the server console. To fine-tune:
 
-1. Temporarily add `log.info("distance: %s", result['matches'][0]['distance'] if result['matches'] else 'no match')` in `handle_tool_call`
-2. Record a few scenes (charger on desk, kettle, etc.)
-3. Ask about something you recorded → note distance (should be small, < 0.5 ideally)
-4. Ask about something never recorded → note distance (should be large)
-5. Pick `RECALL_MAX_DISTANCE` to sit cleanly between the two
-6. Update `RECALL_MAX_DISTANCE` in `memory.py`, remove the debug log, update value in `CHANGELOG.md`
+1. Distance logging is already in `tools.py` — watch the server console while asking questions
+2. Ask about things you recorded → note `top_dist` (should be < 1.0 for clear hits)
+3. Ask about things never recorded → note `top_dist` (should be > 1.2 for misses)
+4. Pick `RECALL_MAX_DISTANCE` to sit between those two clusters
+5. Update `RECALL_MAX_DISTANCE` in `memory.py` and the value in `CHANGELOG.md`
 
 ---
 
