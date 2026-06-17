@@ -242,7 +242,13 @@ export default function App() {
       streamRef.current = stream;
       const video = videoRef.current;
       video.srcObject = stream;
-      await video.play();
+      try {
+        await video.play();
+      } catch (e) {
+        // AbortError fires when a React re-render replaces srcObject before play() resolves.
+        // The stream is still live — safe to ignore.
+        if (e.name !== "AbortError") throw e;
+      }
       setRunning(true);
       setupWs(new WebSocket(wsUrl()));
     } catch (e) {
