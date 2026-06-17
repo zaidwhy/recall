@@ -17,7 +17,7 @@ _THUMBS_DIR = _DATA_DIR / "thumbnails"
 
 # Starting threshold for L2 distance — calibrate by logging query distances and picking
 # the value that separates true hits from never-recorded queries. Lower = stricter.
-RECALL_MAX_DISTANCE = 1.0
+RECALL_MAX_DISTANCE = 1.4
 
 
 @lru_cache(maxsize=1)
