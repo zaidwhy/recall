@@ -1,11 +1,14 @@
 """Function-calling tools exposed to the Gemini Live session."""
 from __future__ import annotations
 
+import logging
 import time
 
 from google.genai import types
 
 from . import memory
+
+log = logging.getLogger("recall")
 
 RECALL_TOOL = types.Tool(function_declarations=[
     types.FunctionDeclaration(
