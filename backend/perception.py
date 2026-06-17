@@ -18,7 +18,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-VISION_MODEL = os.environ.get("GEMINI_VISION_MODEL", "gemini-2.5-flash")
+VISION_MODEL = os.environ.get("GEMINI_VISION_MODEL", "gemini-1.5-flash")
 
 _PROMPT = (
     "You are the perception module of a personal memory assistant that remembers where "
