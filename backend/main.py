@@ -291,8 +291,15 @@ async def ws(websocket: WebSocket) -> None:
 
             elif mtype == "analyze":
                 try:
+                    global _last_flash_call
+                    gap = time.time() - _last_flash_call
+                    if gap < FLASH_MIN_GAP_S:
+                        wait = int(FLASH_MIN_GAP_S - gap) + 1
+                        await websocket.send_json({"type": "error", "detail": f"Rate guard: wait {wait}s before next Flash call"})
+                        continue
                     data = _decode_frame(msg.get("data", ""))
-                    log.info("analyze: %d bytes -> Gemini Flash", len(data))
+                    log.info("analyze: %d bytes -> Gemini Flash (%s)", len(data), perception.VISION_MODEL)
+                    _last_flash_call = time.time()
                     obs = await asyncio.to_thread(perception.analyze_frame, data)
                     log.info("observation (%dms): %s @ %s", obs["latency_ms"], obs["objects"], obs["location_label"])
                     await websocket.send_json({"type": "observation", **obs})
