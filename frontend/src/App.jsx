@@ -46,6 +46,9 @@ export default function App() {
   const [timeline, setTimeline] = useState([]);
   const [ingestCount, setIngestCount] = useState(0);
 
+  // Week 3: spotlight card for the last recalled frame
+  const [recalled, setRecalled] = useState(null);
+
   const teardownVoice = useCallback(() => {
     talkingRef.current = false;
     setTalking(false);
