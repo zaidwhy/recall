@@ -5,6 +5,8 @@ so embeddings are free and offline. No Gemini embedding calls needed.
 """
 from __future__ import annotations
 
+import math
+import time
 import uuid
 from functools import lru_cache
 from pathlib import Path
@@ -15,9 +17,17 @@ _DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 _CHROMA_PATH = _DATA_DIR / "chroma"
 _THUMBS_DIR = _DATA_DIR / "thumbnails"
 
-# Starting threshold for L2 distance — calibrate by logging query distances and picking
-# the value that separates true hits from never-recorded queries. Lower = stricter.
+# L2 distance threshold for "confident" recall (all-MiniLM-L6-v2, unit vectors → L2 ∈ [0,2]).
+# 1.4 ≈ cosine similarity 0.02 — accepts any semantic overlap. Tune down to ~1.1 if false positives appear.
 RECALL_MAX_DISTANCE = 1.4
+
+# Recency blend: score = distance + DECAY_WEIGHT * log(1 + hours_ago).
+# 0.25 means a 6-hour-old memory gets a +0.49 penalty vs. a fresh one at equal semantic distance.
+DECAY_WEIGHT = 0.25
+
+# Within this window, re-ingesting the same location UPDATES the existing entry instead of
+# creating a new one. Keeps the timeline clean without losing the latest frame.
+DEDUP_WINDOW_S = 60.0
 
 
 @lru_cache(maxsize=1)
@@ -27,9 +37,58 @@ def _col() -> chromadb.Collection:
     return client.get_or_create_collection("observations")
 
 
-def log_observation(obs: dict, jpeg_bytes: bytes) -> str:
-    """Store an observation + thumbnail. Returns the entry id."""
+def _time_penalty(timestamp: float) -> float:
+    hours_ago = max(0.0, (time.time() - timestamp) / 3600)
+    return DECAY_WEIGHT * math.log1p(hours_ago)
+
+
+def _find_recent_at_location(location_label: str, within_seconds: float = DEDUP_WINDOW_S) -> dict | None:
+    """Return the most recent entry at this location within the window, or None."""
     col = _col()
+    if col.count() == 0:
+        return None
+    since = time.time() - within_seconds
+    try:
+        res = col.get(
+            where={"$and": [
+                {"location_label": {"$eq": location_label}},
+                {"timestamp": {"$gte": since}},
+            ]},
+            include=["metadatas"],
+        )
+    except Exception:
+        return None
+    if not res["ids"]:
+        return None
+    pairs = sorted(zip(res["ids"], res["metadatas"]), key=lambda x: x[1]["timestamp"], reverse=True)
+    eid, meta = pairs[0]
+    return {"id": eid, **meta}
+
+
+def log_observation(obs: dict, jpeg_bytes: bytes) -> tuple[str, bool]:
+    """Store or refresh an observation.
+
+    If the same location was ingested within DEDUP_WINDOW_S, updates the existing
+    entry (new description + fresh thumbnail) instead of appending a duplicate.
+
+    Returns (entry_id, is_new) where is_new=False means an existing entry was refreshed.
+    """
+    col = _col()
+    recent = _find_recent_at_location(obs["location_label"])
+
+    if recent:
+        col.update(
+            ids=[recent["id"]],
+            documents=[obs["description"]],
+            metadatas=[{
+                "objects": ", ".join(obs["objects"]),
+                "location_label": obs["location_label"],
+                "timestamp": float(obs["timestamp"]),
+            }],
+        )
+        (_THUMBS_DIR / f"{recent['id']}.jpg").write_bytes(jpeg_bytes)
+        return recent["id"], False
+
     entry_id = str(uuid.uuid4())
     (_THUMBS_DIR / f"{entry_id}.jpg").write_bytes(jpeg_bytes)
     col.add(
@@ -41,7 +100,7 @@ def log_observation(obs: dict, jpeg_bytes: bytes) -> str:
             "timestamp": float(obs["timestamp"]),
         }],
     )
-    return entry_id
+    return entry_id, True
 
 
 def recall_memory(
@@ -73,6 +132,22 @@ def recall_memory(
     return _unpack(results["ids"][0], results["documents"][0], results["metadatas"][0], results["distances"][0])
 
 
+def recall_for_tool(query: str, since: float | None = None, until: float | None = None) -> dict:
+    """Semantic search with time-decay re-ranking.
+
+    Fetches up to 9 candidates, re-ranks by score = distance + time_penalty,
+    returns top 3. Entries seen recently rank above semantically equal older ones.
+    """
+    candidates = recall_memory(query, k=9, since=since, until=until)
+    for c in candidates:
+        d = c["distance"] if c["distance"] is not None else 2.0
+        c["score"] = d + _time_penalty(c["timestamp"])
+    candidates.sort(key=lambda x: x["score"])
+    matches = candidates[:3]
+    confident = bool(matches) and matches[0]["distance"] is not None and matches[0]["distance"] <= RECALL_MAX_DISTANCE
+    return {"matches": matches, "confident": confident}
+
+
 def list_all(limit: int = 200) -> list[dict]:
     """All observations, newest first (for the timeline UI)."""
     col = _col()
@@ -92,12 +167,6 @@ def delete_observation(entry_id: str) -> bool:
     (_THUMBS_DIR / f"{entry_id}.jpg").unlink(missing_ok=True)
     col.delete(ids=[entry_id])
     return True
-
-
-def recall_for_tool(query: str, since: float | None = None, until: float | None = None) -> dict:
-    matches = recall_memory(query, k=3, since=since, until=until)
-    confident = bool(matches) and matches[0]["distance"] is not None and matches[0]["distance"] <= RECALL_MAX_DISTANCE
-    return {"matches": matches, "confident": confident}
 
 
 def _unpack(ids: list, docs: list, metas: list, distances: list | None = None) -> list[dict]:
