@@ -44,8 +44,8 @@ THUMBS_DIR.mkdir(exist_ok=True)
 INGEST_INTERVAL_S = 5
 
 # Hard floor between Gemini Flash calls (vision + analyze combined).
-# gemini-1.5-flash free tier: 15 RPM / 1500 RPD. 30s floor → max 2/min, 120/hr, well within limits.
-FLASH_MIN_GAP_S = 30
+# gemini-2.5-flash free tier: 20 RPD. 120s floor → max 1 call/2 min → 10 calls in a 20-min demo session.
+FLASH_MIN_GAP_S = 120
 
 # Tracks the last time we made a Gemini Flash call — shared across ingest loop and analyze handler.
 _last_flash_call: float = 0.0
