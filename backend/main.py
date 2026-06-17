@@ -184,7 +184,7 @@ async def _ingest_loop(websocket: WebSocket) -> None:
                 import re
                 m = re.search(r"retry in (\d+)", msg, re.IGNORECASE)
                 wait = int(m.group(1)) + 5 if m else 65
-                log.warning("rate limited by Gemini (gemini-1.5-flash quota); sleeping %ds", wait)
+                log.warning("rate limited by Gemini (%s quota); sleeping %ds", perception.VISION_MODEL, wait)
                 try:
                     await websocket.send_json({"type": "error", "detail": f"Rate limited — pausing ingestion for {wait}s"})
                 except Exception:
