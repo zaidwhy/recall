@@ -251,6 +251,8 @@ export default function App() {
           } else if (msg.type === "transcript") {
             if (msg.role === "user") setUserText((t) => t + msg.text);
             else setAssistantText((t) => t + msg.text);
+          } else if (msg.type === "recalled") {
+            setRecalled(msg.match);
           } else if (msg.type === "live_status") {
             setLiveState(msg.state === "open" ? "open" : "idle");
           } else if (msg.type === "error") {
