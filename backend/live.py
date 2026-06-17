@@ -17,6 +17,7 @@ import os
 from google.genai import types
 
 from .perception import _client  # reuse the cached genai client
+from . import tools
 
 log = logging.getLogger("recall")
 
