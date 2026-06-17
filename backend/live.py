@@ -49,6 +49,7 @@ async def run_live(websocket, audio_in: asyncio.Queue) -> None:
             automatic_activity_detection=types.AutomaticActivityDetection(disabled=True)
         ),
         system_instruction=types.Content(parts=[types.Part(text=SYSTEM)]),
+        tools=[tools.RECALL_TOOL],
     )
     client = _client()
     async with client.aio.live.connect(model=LIVE_MODEL, config=cfg) as session:
