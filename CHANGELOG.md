@@ -4,6 +4,37 @@ All notable changes to this project. Each entry maps to a dev session / week.
 
 ---
 
+## Week 3 — Recall (2026-06-17)
+
+### Added
+- **`backend/memory.py`**
+  - `recall_memory` now passes `include=["documents","metadatas","distances"]` to ChromaDB and returns L2 `distance` per result
+  - `RECALL_MAX_DISTANCE = 1.0` — default confidence threshold (calibrate: log distances on a true hit vs. a never-recorded query, pick the boundary)
+  - `recall_for_tool(query, since, until)` — wraps `recall_memory`, adds `confident` flag (`matches[0].distance <= RECALL_MAX_DISTANCE`)
+  - `_unpack` updated to accept optional `distances` list; `list_all` path unaffected (no distances from `col.get()`)
+- **`backend/tools.py`** — was a stub, now fully implemented
+  - `RECALL_TOOL` — `types.Tool` with `recall_memory(query, minutes_ago?)` function declaration
+  - `handle_tool_call(name, args)` — executes the tool call: calls `recall_for_tool`, trims payload to speakable fields + `minutes_ago`
+- **`backend/live.py`**
+  - `tools=[RECALL_TOOL]` wired into `LiveConnectConfig`
+  - New SYSTEM prompt: model knows it has photographic memory, MUST call `recall_memory` for location/time questions, must not invent memories
+  - `tool_call` handling in the receive loop: dispatches via `asyncio.to_thread` (ChromaDB is sync), sends `FunctionResponse` back to session, pushes `recalled` WS message to phone if confident
+- **`frontend/src/App.jsx`**
+  - `recalled` state for spotlight card
+  - `recalled` WS message handler sets spotlight; cleared at `startTalk` (fresh query = fresh spotlight)
+  - Spotlight card rendered above `.timeline` when `recalled` is set
+- **`frontend/src/App.css`**
+  - `.recalled` spotlight wrapper (accent border, slide-in animation)
+  - `.recalled-badge`, `.recalled-x` dismiss button
+  - Overrides inside `.recalled` to zero the inner `.memory-entry` border/padding, accent-color the time
+
+### Key decisions
+- ChromaDB dispatched via `asyncio.to_thread` — keeps the receive loop non-blocking during the sync embedding+query call
+- `RECALL_MAX_DISTANCE` starts at 1.0 (L2, all-MiniLM-L6-v2) — must be calibrated on first phone test session
+- Spotlight card clears on new talk press so it always reflects the current query's match
+
+---
+
 ## Week 2 — Memory Ingestion (2026-06-16)
 
 ### Added
