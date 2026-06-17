@@ -30,12 +30,6 @@ from .live import run_live  # noqa: E402
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger("recall")
 
-# Tracks the last time we made a Gemini Flash call (vision model).
-# Shared across the ingest loop and the on-demand analyze handler.
-_last_flash_call: float = 0.0
-
-log.info("Vision model: %s  (min gap: %ds)", perception.VISION_MODEL, FLASH_MIN_GAP_S)
-
 app = FastAPI(title="Recall", version="0.2.0")
 
 DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
@@ -51,6 +45,11 @@ INGEST_INTERVAL_S = 5
 # Hard floor between Gemini Flash calls (vision + analyze combined).
 # gemini-1.5-flash free tier: 15 RPM / 1500 RPD. 30s floor → max 2/min, 120/hr, well within limits.
 FLASH_MIN_GAP_S = 30
+
+# Tracks the last time we made a Gemini Flash call — shared across ingest loop and analyze handler.
+_last_flash_call: float = 0.0
+
+log.info("Vision model: %s  |  min gap between Flash calls: %ds", perception.VISION_MODEL, FLASH_MIN_GAP_S)
 
 
 # ---------------------------------------------------------------------------
