@@ -144,6 +144,12 @@ async def _ingest_loop(websocket: WebSocket) -> None:
             changed = await asyncio.to_thread(perception.has_scene_changed, jpeg)
             if not changed:
                 continue
+            global _last_flash_call
+            gap = time.time() - _last_flash_call
+            if gap < FLASH_MIN_GAP_S:
+                log.debug("flash gap %.0fs < %ds — skipping", gap, FLASH_MIN_GAP_S)
+                continue
+            _last_flash_call = time.time()
             obs = await asyncio.to_thread(perception.analyze_frame, jpeg)
             entry_id, is_new = await asyncio.to_thread(memory.log_observation, obs, jpeg)
             action = "ingested" if is_new else "updated"
