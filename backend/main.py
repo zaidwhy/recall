@@ -161,7 +161,7 @@ async def _ingest_loop(websocket: WebSocket) -> None:
             changed = await asyncio.to_thread(perception.has_scene_changed, jpeg)
             if not changed:
                 continue
-            global _last_flash_call, _flash_calls_today
+            global _last_flash_call, _next_scan_at, _flash_calls_today
             if _flash_calls_today >= FLASH_DAILY_BUDGET:
                 log.warning("daily Flash budget (%d) reached — pausing ingestion", FLASH_DAILY_BUDGET)
                 await asyncio.sleep(300)
@@ -170,7 +170,12 @@ async def _ingest_loop(websocket: WebSocket) -> None:
             if gap < FLASH_MIN_GAP_S:
                 log.debug("flash gap %.0fs < %ds — skipping", gap, FLASH_MIN_GAP_S)
                 continue
+            try:
+                await websocket.send_json({"type": "scanning"})
+            except Exception:
+                pass
             _last_flash_call = time.time()
+            _next_scan_at = _last_flash_call + FLASH_MIN_GAP_S
             _flash_calls_today += 1
             log.info("flash call #%d/%d", _flash_calls_today, FLASH_DAILY_BUDGET)
             obs = await asyncio.to_thread(perception.analyze_frame, jpeg)
