@@ -105,7 +105,7 @@ cloudflared tunnel --url http://localhost:8000
 # 3. Frontend  (only needed once, or after UI changes)
 cd frontend && npm install && npm run build
 
-# 4. Open the tunnel URL on your phone → Start camera → Record → ask anything
+# 4. Open the tunnel URL on your phone → Start camera → recording begins automatically
 ```
 
 > **Free tier note:** `gemini-2.5-flash` has 20 vision calls per day on the free tier. The recording pill shows how many calls remain. Quota resets at midnight. Do **not** enable billing — it removes the free tier.
