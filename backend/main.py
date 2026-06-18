@@ -72,7 +72,14 @@ def _decode_frame(payload: str) -> bytes:
 
 @app.get("/health")
 async def health() -> JSONResponse:
-    return JSONResponse({"status": "ok", "frontend_built": DIST_DIR.is_dir()})
+    return JSONResponse({
+        "status": "ok",
+        "frontend_built": DIST_DIR.is_dir(),
+        "vision_model": perception.VISION_MODEL,
+        "flash_calls_today": _flash_calls_today,
+        "flash_budget": FLASH_DAILY_BUDGET,
+        "next_scan_in_s": max(0, round(_next_scan_at - time.time())) if _next_scan_at > 0 else 0,
+    })
 
 
 @app.get("/memory")
