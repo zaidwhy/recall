@@ -49,6 +49,7 @@ FLASH_MIN_GAP_S = 120
 
 # Tracks the last time we made a Gemini Flash call — shared across ingest loop and analyze handler.
 _last_flash_call: float = 0.0
+_next_scan_at: float = 0.0           # earliest wall-clock time the next Flash call is allowed
 _flash_calls_today: int = 0          # resets on server restart; used for on-screen budget display
 FLASH_DAILY_BUDGET = 18              # stop at 18 to keep 2 in reserve
 
