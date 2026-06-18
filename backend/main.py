@@ -138,7 +138,13 @@ async def _ingest_loop(websocket: WebSocket) -> None:
     """Always-on ingestion: sample last_frame.jpg every INGEST_INTERVAL_S seconds,
     run scene-change detection, and only call Gemini Flash when something changed."""
     try:
-        await websocket.send_json({"type": "record_status", "recording": True})
+        await websocket.send_json({
+            "type": "record_status",
+            "recording": True,
+            "flash_calls": _flash_calls_today,
+            "flash_budget": FLASH_DAILY_BUDGET,
+            "next_scan_at": _next_scan_at,
+        })
     except Exception:
         return
 
