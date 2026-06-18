@@ -162,7 +162,6 @@ async def _ingest_loop(websocket: WebSocket) -> None:
             changed = await asyncio.to_thread(perception.has_scene_changed, jpeg)
             if not changed:
                 continue
-            global _last_flash_call, _next_scan_at, _flash_calls_today
             if _flash_calls_today >= FLASH_DAILY_BUDGET:
                 log.warning("daily Flash budget (%d) reached — pausing ingestion", FLASH_DAILY_BUDGET)
                 await asyncio.sleep(300)
