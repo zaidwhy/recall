@@ -52,6 +52,38 @@ Most "AI + camera" projects pipe a frame to a vision model and echo the response
 
 ---
 
+## Features
+
+### Live recording experience
+- **Auto-start recording** — camera opens and recording begins automatically; no second tap required
+- **Scanning indicator** — when a Flash call fires, the recording pill turns blue ("Scanning…") and a sweep overlay appears on the video so you always know when a capture is happening
+- **Countdown timer** — pill shows `· 87s` counting down to the next available scan, then `· ready` when the gap has elapsed
+- **Budget indicator** — pill shows remaining daily calls (e.g. `· 14 calls left`); turns yellow when budget is exhausted
+- **Dynamic header** — tagline updates live: "scanning…" during a Flash call, "next scan in Xs" between calls
+
+### Memory timeline
+- **Grouped by location** — memories are grouped by `location_label` (e.g. "kitchen counter", "desk"), sorted by most recent activity per group
+- **Relative timestamps** — cards show "3m ago" / "2h ago" instead of a clock time; updates as you use the app
+- **Slide-in animation** — new memory cards animate in from above when they arrive
+- **Search** — filter across location, description, and object chips in real time
+- **Lightbox** — tap any thumbnail to view it full-screen
+- **Chip overflow** — cards with more than 4 object tags show "+N more" to keep cards compact
+- **Document title** — browser tab shows `Recall (3)` with the current memory count
+
+### Voice Q&A
+- **Push-to-talk** — hold the circular button; release to send. Manual activity detection — no trailing silence required
+- **Tap-to-ask** — tap once to start a 7-second auto-timed turn (useful when your hands are occupied)
+- **Recalled spotlight** — when Recall finds a match, the exact thumbnail + location + time is surfaced as a card below the transcript
+- **Haptic feedback** — phone vibrates when PTT is pressed (where supported)
+
+### Robustness
+- **WS reconnect banner** — if the tunnel drops, a yellow banner appears with a one-tap reconnect button
+- **Empty recording state** — when recording has started but no scenes exist yet, shows a helpful prompt instead of a blank screen
+- **Rate-limit backoff** — on 429 errors the backend parses the retry delay from Gemini's response and sleeps exactly that long
+- **Daily budget guard** — ingest loop and analyze handler share a counter; stops at 18/20 to keep 2 in reserve
+
+---
+
 ## Quick start
 
 **Prerequisites:** Python 3.11+, Node 18+, a Gemini API key (free tier, no billing required), cloudflared.
