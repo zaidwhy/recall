@@ -322,7 +322,7 @@ async def ws(websocket: WebSocket) -> None:
 
             elif mtype == "analyze":
                 try:
-                    global _last_flash_call, _flash_calls_today
+                    global _last_flash_call, _next_scan_at, _flash_calls_today
                     if _flash_calls_today >= FLASH_DAILY_BUDGET:
                         await websocket.send_json({"type": "error", "detail": f"Daily vision budget ({FLASH_DAILY_BUDGET} calls) reached. Resets at midnight."})
                         continue
@@ -333,6 +333,7 @@ async def ws(websocket: WebSocket) -> None:
                         continue
                     data = _decode_frame(msg.get("data", ""))
                     _last_flash_call = time.time()
+                    _next_scan_at = _last_flash_call + FLASH_MIN_GAP_S
                     _flash_calls_today += 1
                     log.info("analyze: %d bytes -> Flash #%d/%d (%s)", len(data), _flash_calls_today, FLASH_DAILY_BUDGET, perception.VISION_MODEL)
                     obs = await asyncio.to_thread(perception.analyze_frame, data)
