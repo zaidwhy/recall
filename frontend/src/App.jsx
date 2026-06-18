@@ -12,8 +12,16 @@ function wsUrl() {
 }
 
 function fmtTime(ts) {
-  const d = new Date(ts * 1000);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return new Date(ts * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function fmtRelative(ts) {
+  const mins = Math.round((Date.now() / 1000 - ts) / 60);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return new Date(ts * 1000).toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
 export default function App() {
@@ -48,6 +56,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [flashCalls, setFlashCalls] = useState(0);
   const [flashBudget, setFlashBudget] = useState(18);
+  const [scanning, setScanning] = useState(false);
+  const [nextScanAt, setNextScanAt] = useState(0);
+  const [countdown, setCountdown] = useState(0);
 
   // ── Derived state ────────────────────────────────────────────────────────
 
@@ -61,7 +72,6 @@ export default function App() {
     );
   }, [timeline, searchQuery]);
 
-  // Group by location, sorted by most recent entry per group
   const groupedTimeline = useMemo(() => {
     if (!filteredTimeline.length) return [];
     const groups = new Map();
@@ -72,6 +82,20 @@ export default function App() {
     }
     return [...groups.entries()].sort(([, a], [, b]) => b[0].timestamp - a[0].timestamp);
   }, [filteredTimeline]);
+
+  // ── Side effects ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    document.title = timeline.length > 0 ? `Recall (${timeline.length})` : "Recall";
+  }, [timeline.length]);
+
+  useEffect(() => {
+    if (!nextScanAt) return;
+    const tick = () => setCountdown(Math.max(0, Math.round((nextScanAt - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [nextScanAt]);
 
   // ── Voice helpers ─────────────────────────────────────────────────────────
 
@@ -122,7 +146,7 @@ export default function App() {
     }
   }, [startTalk, stopTalk]);
 
-  // ── WebSocket setup (extracted so reconnect can reuse the same handlers) ──
+  // ── WebSocket setup ───────────────────────────────────────────────────────
 
   const setupWs = useCallback((ws) => {
     ws.binaryType = "arraybuffer";
@@ -151,6 +175,10 @@ export default function App() {
         .then(r => r.json())
         .then(entries => setTimeline(entries.map(e => ({ ...e, thumbnail: `/thumbnails/${e.id}.jpg` }))))
         .catch(() => {});
+      // Auto-start recording after camera settles
+      setTimeout(() => {
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "record_start" }));
+      }, 2000);
     };
 
     ws.onmessage = (ev) => {
@@ -168,7 +196,11 @@ export default function App() {
             setObservation(msg);
             setAnalyzing(false);
             break;
+          case "scanning":
+            setScanning(true);
+            break;
           case "ingested":
+            setScanning(false);
             setTimeline(prev => [{
               id: msg.id, thumbnail: msg.thumbnail,
               location_label: msg.location_label, description: msg.description,
@@ -176,16 +208,22 @@ export default function App() {
             }, ...prev]);
             setIngestCount(n => n + 1);
             if (msg.flash_calls != null) { setFlashCalls(msg.flash_calls); setFlashBudget(msg.flash_budget); }
+            if (msg.next_scan_at) setNextScanAt(msg.next_scan_at * 1000);
             break;
           case "updated":
+            setScanning(false);
             setTimeline(prev => prev.map(e => e.id === msg.id
               ? { ...e, description: msg.description, objects: msg.objects, timestamp: msg.timestamp, thumbnail: msg.thumbnail + "?t=" + Date.now() }
               : e
             ));
             if (msg.flash_calls != null) { setFlashCalls(msg.flash_calls); setFlashBudget(msg.flash_budget); }
+            if (msg.next_scan_at) setNextScanAt(msg.next_scan_at * 1000);
             break;
           case "record_status":
             setRecording(msg.recording);
+            if (!msg.recording) setScanning(false);
+            if (msg.flash_calls != null) { setFlashCalls(msg.flash_calls); setFlashBudget(msg.flash_budget); }
+            if (msg.next_scan_at) setNextScanAt(msg.next_scan_at * 1000);
             break;
           case "transcript":
             if (msg.role === "user") setUserText(t => t + msg.text);
@@ -200,6 +238,7 @@ export default function App() {
           case "error":
             setError(msg.detail || "server error");
             setAnalyzing(false);
+            setScanning(false);
             break;
         }
       } catch { /* ignore */ }
@@ -209,6 +248,7 @@ export default function App() {
       setWsState("closed");
       setLiveState("idle");
       setRecording(false);
+      setScanning(false);
     };
 
     ws.onerror = () => setError("WebSocket error — is the backend running on this origin?");
@@ -233,6 +273,7 @@ export default function App() {
     setRunning(false);
     setWsState("closed");
     setRecording(false);
+    setScanning(false);
   }, [teardownVoice]);
 
   const start = useCallback(async () => {
@@ -248,8 +289,6 @@ export default function App() {
       try {
         await video.play();
       } catch (e) {
-        // AbortError fires when a React re-render replaces srcObject before play() resolves.
-        // The stream is still live — safe to ignore.
         if (e.name !== "AbortError") throw e;
       }
       setRunning(true);
@@ -346,12 +385,17 @@ export default function App() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   const secure = window.isSecureContext;
+  const budgetExhausted = flashCalls >= flashBudget;
 
   return (
     <div className="app">
       <header>
         <h1>Recall</h1>
-        <p className="tag">see once · remember always</p>
+        <p className="tag">
+          {recording
+            ? scanning ? "scanning…" : countdown > 0 ? `next scan in ${countdown}s` : "see once · remember always"
+            : "see once · remember always"}
+        </p>
       </header>
 
       {!secure && (
@@ -368,15 +412,15 @@ export default function App() {
             <div className="ob-num">1</div>
             <div className="ob-body">
               <strong>Start camera</strong>
-              <span>Point your phone at the room</span>
+              <span>Point your phone at the room — recording starts automatically</span>
             </div>
           </div>
           <div className="ob-divider" />
           <div className="ob-step">
             <div className="ob-num">2</div>
             <div className="ob-body">
-              <strong>Record memory</strong>
-              <span>Walk around — Recall memorizes what it sees</span>
+              <strong>Walk around</strong>
+              <span>Recall memorizes each new scene it sees</span>
             </div>
           </div>
           <div className="ob-divider" />
@@ -394,13 +438,23 @@ export default function App() {
       <div className="stage">
         <video ref={videoRef} playsInline autoPlay muted />
         <canvas ref={canvasRef} hidden />
+
+        {/* Scanning overlay */}
+        {running && recording && scanning && <div className="scan-overlay" />}
+
+        {/* Recording pill */}
         {running && recording && (
-          <div className={`recording-pill${flashCalls >= flashBudget ? " budget-warn" : ""}`}>
+          <div className={`recording-pill${budgetExhausted ? " budget-warn" : ""}${scanning ? " pill-scanning" : ""}`}>
             <span className="rec-dot" />
-            REC · {ingestCount} {ingestCount === 1 ? "scene" : "scenes"}
-            {flashCalls > 0 && (
-              <span className="flash-budget"> · {flashBudget - flashCalls} calls left</span>
+            {scanning
+              ? "Scanning…"
+              : `REC · ${ingestCount} ${ingestCount === 1 ? "scene" : "scenes"}`}
+            {!scanning && !budgetExhausted && (
+              <span className="flash-budget">
+                {countdown > 0 ? ` · ${countdown}s` : ingestCount > 0 ? " · ready" : ""}
+              </span>
             )}
+            {budgetExhausted && <span className="flash-budget"> · budget full</span>}
           </div>
         )}
       </div>
@@ -422,11 +476,22 @@ export default function App() {
         )}
       </div>
 
-      {/* Reconnect banner when WS drops while running */}
+      {/* Reconnect banner */}
       {running && wsState === "closed" && (
         <div className="ws-banner">
           Connection lost —
           <button className="ws-reconnect" onClick={reconnectWs}>Reconnect</button>
+        </div>
+      )}
+
+      {/* Empty recording state */}
+      {running && recording && timeline.length === 0 && !scanning && (
+        <div className="empty-recording">
+          <div className="er-icon">👁</div>
+          <p>Recall is watching. Move to a new spot to trigger the first scan.</p>
+          <p className="er-sub">
+            {countdown > 0 ? `Next scan available in ${countdown}s` : "Ready — waiting for a scene change"}
+          </p>
         </div>
       )}
 
@@ -544,9 +609,12 @@ export default function App() {
                   <div className="memory-meta">
                     <p className="memory-desc">{entry.description}</p>
                     <div className="chips">
-                      {entry.objects.map((o, i) => <span key={i} className="chip">{o}</span>)}
+                      {entry.objects.slice(0, 4).map((o, i) => <span key={i} className="chip">{o}</span>)}
+                      {entry.objects.length > 4 && (
+                        <span className="chip chip-more">+{entry.objects.length - 4}</span>
+                      )}
                     </div>
-                    <div className="memory-time">{fmtTime(entry.timestamp)}</div>
+                    <div className="memory-time">{fmtRelative(entry.timestamp)}</div>
                   </div>
                   <button className="memory-delete" onClick={() => deleteEntry(entry.id)} title="Delete">
                     🗑
@@ -576,6 +644,8 @@ export default function App() {
           <div><dt>Last ack</dt><dd>{lastAck ? `#${lastAck.frame} · ${(lastAck.bytes / 1024).toFixed(1)} KB` : "—"}</dd></div>
           <div><dt>Voice</dt><dd>{liveState === "open" ? (talking ? "listening" : "ready") : "off"}</dd></div>
           <div><dt>Memories</dt><dd>{timeline.length}</dd></div>
+          <div><dt>Flash</dt><dd>{flashCalls}/{flashBudget} calls</dd></div>
+          <div><dt>Next scan</dt><dd>{scanning ? "now" : countdown > 0 ? `${countdown}s` : "ready"}</dd></div>
         </dl>
       </details>
     </div>
