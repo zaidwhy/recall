@@ -178,4 +178,5 @@ To reproduce: `python -m eval.benchmark` (creates an isolated temp ChromaDB — 
 | 3 | `recall_memory` tool → spoken recall + spotlight card | ✅ Done |
 | 4 | `eval/benchmark.py` → recall@1/@3 + latency report | ✅ Done |
 | 5 | UI polish — PTT button, tap-to-ask, search, groups, lightbox | ✅ Done |
-| 6 | Demo video + LinkedIn build-in-public series | ⬜ Planned |
+| 6 | Live scanning indicator, countdown timer, auto-record, budget UI, relative time, animations | ✅ Done |
+| 7 | Demo video + LinkedIn build-in-public series | ⬜ Planned |
