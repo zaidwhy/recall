@@ -169,6 +169,44 @@ def delete_observation(entry_id: str) -> bool:
     return True
 
 
+def clear_all() -> int:
+    """Delete every observation and thumbnail. Returns count deleted."""
+    col = _col()
+    ids = col.get()["ids"]
+    if not ids:
+        return 0
+    for eid in ids:
+        (_THUMBS_DIR / f"{eid}.jpg").unlink(missing_ok=True)
+    col.delete(ids=ids)
+    return len(ids)
+
+
+def stats() -> dict:
+    """Aggregate stats for the /api/stats endpoint."""
+    col = _col()
+    total = col.count()
+    if total == 0:
+        return {"total": 0, "distinct_locations": 0, "locations": [], "top_objects": [], "last_scan_ts": None}
+    res = col.get(include=["metadatas"])
+    metas = res["metadatas"]
+    locations = sorted({m["location_label"] for m in metas})
+    obj_counts: dict[str, int] = {}
+    for m in metas:
+        for o in m["objects"].split(","):
+            o = o.strip()
+            if o:
+                obj_counts[o] = obj_counts.get(o, 0) + 1
+    top = sorted(obj_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    last_ts = max(m["timestamp"] for m in metas)
+    return {
+        "total": total,
+        "distinct_locations": len(locations),
+        "locations": locations,
+        "top_objects": [{"name": n, "count": c} for n, c in top],
+        "last_scan_ts": last_ts,
+    }
+
+
 def _unpack(ids: list, docs: list, metas: list, distances: list | None = None) -> list[dict]:
     dists = distances if distances is not None else [None] * len(ids)
     return [
