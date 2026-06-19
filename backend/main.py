@@ -109,12 +109,27 @@ async def get_memory() -> JSONResponse:
     return JSONResponse(entries)
 
 
+@app.delete("/memory")
+async def clear_memory() -> JSONResponse:
+    n = await asyncio.to_thread(memory.clear_all)
+    return JSONResponse({"cleared": n})
+
+
 @app.delete("/memory/{entry_id}")
 async def delete_memory(entry_id: str) -> JSONResponse:
     found = await asyncio.to_thread(memory.delete_observation, entry_id)
     if not found:
         return JSONResponse({"error": "not found"}, status_code=404)
     return JSONResponse({"deleted": entry_id})
+
+
+@app.get("/api/stats")
+async def api_stats() -> JSONResponse:
+    s = await asyncio.to_thread(memory.stats)
+    s["flash_calls_today"] = _flash_calls_today
+    s["flash_budget"] = FLASH_DAILY_BUDGET
+    s["next_scan_in_s"] = max(0, round(_next_scan_at - time.time())) if _next_scan_at > 0 else 0
+    return JSONResponse(s)
 
 
 # ---------------------------------------------------------------------------
