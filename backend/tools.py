@@ -59,6 +59,17 @@ def _format_time(minutes_ago: int) -> str:
 
 def handle_tool_call(name: str, args: dict) -> dict:
     """Execute a tool call from the Live model. Returns a speakable result dict."""
+    if name == "list_locations":
+        s = memory.stats()
+        locs = s.get("locations", [])
+        n = len(locs)
+        summary = (
+            f"I have memories from {n} location{'s' if n != 1 else ''}: {', '.join(locs)}."
+            if locs else "I don't have any location memories yet."
+        )
+        log.info("list_locations → %d locations", n)
+        return {"locations": locs, "count": n, "summary": summary}
+
     if name != "recall_memory":
         return {"error": f"unknown tool {name}"}
 
