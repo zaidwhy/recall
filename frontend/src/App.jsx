@@ -350,6 +350,14 @@ export default function App() {
     setTimeline(prev => prev.filter(e => e.id !== id));
   }, []);
 
+  const clearAll = useCallback(async () => {
+    if (!confirm(`Delete all ${timeline.length} ${timeline.length === 1 ? "memory" : "memories"}? This cannot be undone.`)) return;
+    try { await fetch("/memory", { method: "DELETE" }); } catch { /* ignore */ }
+    setTimeline([]);
+    setIngestCount(0);
+    setRecalled(null);
+  }, [timeline.length]);
+
   const startVoice = useCallback(async () => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) { setError("Start the camera first."); return; }
