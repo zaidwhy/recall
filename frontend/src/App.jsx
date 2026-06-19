@@ -419,6 +419,14 @@ export default function App() {
         </p>
       </header>
 
+      {timeline.length > 0 && (
+        <div className="stats-bar">
+          <span>{timeline.length} {timeline.length === 1 ? "memory" : "memories"}</span>
+          <span className="stats-dot">·</span>
+          <span>{distinctLocations} {distinctLocations === 1 ? "location" : "locations"}</span>
+        </div>
+      )}
+
       {!secure && (
         <div className="warn">
           Not a secure context — camera will fail. Open the
