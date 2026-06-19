@@ -4,6 +4,38 @@ All notable changes to this project. Each entry maps to a dev session / week.
 
 ---
 
+## Week 3 Refinement (2026-06-19)
+
+### Added
+- **`backend/memory.py`**
+  - `clear_all()` — deletes every ChromaDB entry and thumbnail; returns count deleted
+  - `stats()` — aggregate snapshot: `total`, `distinct_locations`, `locations[]`, `top_objects[]`, `last_scan_ts`
+- **`backend/main.py`**
+  - `_flash_blocked()` helper — single place that decides whether a Flash call is allowed; returns a human message or `None`
+  - `_charge_flash()` helper — advances `_last_flash_call`, `_next_scan_at`, `_flash_calls_today`; eliminates the previous copy-paste between `_ingest_loop` and `analyze`
+  - `DELETE /memory` — clears all memories (returns `{"cleared": N}`)
+  - `GET /api/stats` — returns memory stats + flash budget info; tested live against running server
+- **`backend/tools.py`**
+  - `list_locations` function declaration added to `RECALL_TOOL` — answers "what have you seen?", "what locations do you know?"
+  - `handle_tool_call` — new `list_locations` branch: calls `memory.stats()`, returns `{locations, count, summary}` as a speakable sentence
+- **`frontend/src/App.jsx`**
+  - `distinctLocations` derived state (Set of unique location labels from timeline)
+  - `clearAll` callback — confirms, calls `DELETE /memory`, clears timeline + recalled state
+  - Stats bar rendered below header when memories exist: "N memories · M locations"
+  - "Clear" button in timeline header triggers `clearAll`
+  - Auto-dismiss `error` after 8 s (useEffect on `error` state)
+- **`frontend/src/App.css`**
+  - `.stats-bar` — centered muted mini-bar with slide-in animation
+  - `.stats-dot` — divider between stats items
+  - `.clear-all` — ghost pill button with danger-color hover
+
+### Verified
+- Server started cleanly with Python 3.14 (`py -m uvicorn ...`)
+- `/health` → 200, `/api/stats` → 200 (`total:0` on empty store), `/memory` → 200 `[]`
+- Frontend builds cleanly (`vite build`, 160 KB JS, 12 KB CSS)
+
+---
+
 ## Week 3 — Recall (2026-06-17)
 
 ### Added
