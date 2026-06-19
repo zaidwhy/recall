@@ -56,6 +56,25 @@ FLASH_DAILY_BUDGET = 18              # stop at 18 to keep 2 in reserve
 log.info("Vision model: %s  |  min gap between Flash calls: %ds", perception.VISION_MODEL, FLASH_MIN_GAP_S)
 
 
+def _flash_blocked() -> str | None:
+    """Return a human-readable reason if a Flash call is not allowed right now, else None."""
+    if _flash_calls_today >= FLASH_DAILY_BUDGET:
+        return f"Daily vision budget ({FLASH_DAILY_BUDGET} calls) reached. Resets at midnight."
+    gap = time.time() - _last_flash_call
+    if gap < FLASH_MIN_GAP_S:
+        wait = int(FLASH_MIN_GAP_S - gap) + 1
+        return f"Rate guard: wait {wait}s before next Flash call"
+    return None
+
+
+def _charge_flash() -> None:
+    """Mark a Flash call as used and advance the next-scan timer."""
+    global _last_flash_call, _next_scan_at, _flash_calls_today
+    _last_flash_call = time.time()
+    _next_scan_at = _last_flash_call + FLASH_MIN_GAP_S
+    _flash_calls_today += 1
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
