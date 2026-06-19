@@ -32,7 +32,16 @@ RECALL_TOOL = types.Tool(function_declarations=[
             },
             required=["query"],
         ),
-    )
+    ),
+    types.FunctionDeclaration(
+        name="list_locations",
+        description=(
+            "Return all locations the user has visited that Recall has memorized. "
+            "Use when asked 'what have you seen?', 'what locations do you know about?', "
+            "'where have I been?', or 'what do you remember?'."
+        ),
+        parameters=types.Schema(type=types.Type.OBJECT, properties={}),
+    ),
 ])
 
 
