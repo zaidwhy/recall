@@ -83,6 +83,13 @@ export default function App() {
     return [...groups.entries()].sort(([, a], [, b]) => b[0].timestamp - a[0].timestamp);
   }, [filteredTimeline]);
 
+  // ── Derived state (stats) ────────────────────────────────────────────────
+
+  const distinctLocations = useMemo(
+    () => new Set(timeline.map(e => e.location_label)).size,
+    [timeline]
+  );
+
   // ── Side effects ──────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -96,6 +103,12 @@ export default function App() {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [nextScanAt]);
+
+  useEffect(() => {
+    if (!error) return;
+    const id = setTimeout(() => setError(""), 8000);
+    return () => clearTimeout(id);
+  }, [error]);
 
   // ── Voice helpers ─────────────────────────────────────────────────────────
 
