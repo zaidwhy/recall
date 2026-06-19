@@ -613,6 +613,7 @@ export default function App() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
+            <button className="clear-all" onClick={clearAll} title="Delete all memories">Clear</button>
           </div>
 
           {filteredTimeline.length === 0 && (
