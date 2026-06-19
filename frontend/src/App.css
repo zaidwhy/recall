@@ -590,6 +590,35 @@ button.record.recording {
   cursor: pointer;
 }
 
+/* ── Stats bar ── */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding: 2px 0;
+  animation: slide-in 0.2s ease-out;
+}
+
+.stats-dot { opacity: 0.4; }
+
+/* ── Clear all button ── */
+.clear-all {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  color: var(--muted);
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  width: auto;
+  flex-shrink: 0;
+  border-radius: 999px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.clear-all:hover { color: var(--danger); border-color: rgba(248,113,113,0.4); background: #2a0d0d; }
+
 /* ── Warn / Error ── */
 .warn, .error {
   border-radius: 12px;
