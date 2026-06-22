@@ -59,6 +59,8 @@ export default function App() {
   const [scanning, setScanning] = useState(false);
   const [nextScanAt, setNextScanAt] = useState(0);
   const [countdown, setCountdown] = useState(0);
+  const [manualRecall, setManualRecall] = useState(null);
+  const [searching, setSearching] = useState(false);
 
   // ── Derived state ────────────────────────────────────────────────────────
 
