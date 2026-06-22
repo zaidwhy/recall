@@ -132,13 +132,53 @@ def recall_memory(
     return _unpack(results["ids"][0], results["documents"][0], results["metadatas"][0], results["distances"][0])
 
 
-def recall_for_tool(query: str, since: float | None = None, until: float | None = None) -> dict:
-    """Semantic search with time-decay re-ranking.
+def find_by_object(
+    object_name: str,
+    limit: int = 9,
+    since: float | None = None,
+    until: float | None = None,
+) -> list[dict]:
+    """Return observations whose objects list contains object_name (case-insensitive substring).
 
-    Fetches up to 9 candidates, re-ranks by score = distance + time_penalty,
-    returns top 3. Entries seen recently rank above semantically equal older ones.
+    Complements semantic search: if the user asks "where are my keys?", this returns every
+    observation that explicitly tagged "keys" in the objects field, newest first.
+    """
+    col = _col()
+    if col.count() == 0:
+        return []
+    where: dict | None = None
+    if since is not None and until is not None:
+        where = {"$and": [{"timestamp": {"$gte": since}}, {"timestamp": {"$lte": until}}]}
+    elif since is not None:
+        where = {"timestamp": {"$gte": since}}
+    elif until is not None:
+        where = {"timestamp": {"$lte": until}}
+    kwargs: dict = {"include": ["documents", "metadatas"]}
+    if where:
+        kwargs["where"] = where
+    res = col.get(**kwargs)
+    entries = _unpack(res["ids"], res["documents"], res["metadatas"])
+    q = object_name.lower()
+    matches = [e for e in entries if any(q in o.lower() for o in e["objects"])]
+    matches.sort(key=lambda x: x["timestamp"], reverse=True)
+    return matches[:limit]
+
+
+def recall_for_tool(query: str, since: float | None = None, until: float | None = None) -> dict:
+    """Semantic search + exact object-name matching, re-ranked by time decay.
+
+    Strategy:
+    1. Semantic search → up to 9 candidates.
+    2. Exact object-name match → blend in any unique hits (synthetic distance 0.5).
+    3. Re-rank by score = distance + time_penalty; return top 3.
     """
     candidates = recall_memory(query, k=9, since=since, until=until)
+    seen_ids = {c["id"] for c in candidates}
+    for e in find_by_object(query, limit=5, since=since, until=until):
+        if e["id"] not in seen_ids:
+            e["distance"] = 0.5  # exact name match — treat as high-confidence
+            candidates.append(e)
+            seen_ids.add(e["id"])
     for c in candidates:
         d = c["distance"] if c["distance"] is not None else 2.0
         c["score"] = d + _time_penalty(c["timestamp"])
