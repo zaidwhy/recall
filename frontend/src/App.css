@@ -604,6 +604,42 @@ button.record.recording {
 
 .stats-dot { opacity: 0.4; }
 
+/* ── Search Ask button ── */
+.search-ask {
+  background: transparent;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  color: var(--accent);
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  width: auto;
+  flex-shrink: 0;
+  border-radius: 999px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.search-ask:hover:not(:disabled) { background: var(--accent-dim); border-color: rgba(96, 165, 250, 0.4); }
+
+/* ── Manual search result card ── */
+.manual-recall {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 8px;
+  animation: slide-in 0.22s ease-out;
+}
+
+.manual-recall .recalled-badge { color: var(--muted); }
+
+.manual-recall.mr-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding: 10px 14px;
+}
+
 /* ── Clear all button ── */
 .clear-all {
   background: transparent;
