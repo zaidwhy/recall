@@ -132,6 +132,17 @@ async def api_stats() -> JSONResponse:
     return JSONResponse(s)
 
 
+@app.get("/api/search")
+async def api_search(q: str = "") -> JSONResponse:
+    """Recall search from the UI — returns top 3 matches with thumbnails."""
+    if not q.strip():
+        return JSONResponse({"error": "q is required"}, status_code=400)
+    result = await asyncio.to_thread(memory.recall_for_tool, q.strip())
+    for m in result["matches"]:
+        m["thumbnail"] = f"/thumbnails/{m['id']}.jpg"
+    return JSONResponse(result)
+
+
 # ---------------------------------------------------------------------------
 # WebSocket helpers
 # ---------------------------------------------------------------------------
