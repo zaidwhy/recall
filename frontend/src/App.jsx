@@ -634,10 +634,46 @@ export default function App() {
               type="search"
               placeholder="Search…"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => { setSearchQuery(e.target.value); setManualRecall(null); }}
+              onKeyDown={e => e.key === "Enter" && searchMemory()}
             />
+            <button className="search-ask" onClick={searchMemory} disabled={searching || !searchQuery.trim()}>
+              {searching ? "…" : "Ask"}
+            </button>
             <button className="clear-all" onClick={clearAll} title="Delete all memories">Clear</button>
           </div>
+
+          {manualRecall && (
+            manualRecall.notFound ? (
+              <div className="manual-recall mr-empty">
+                <span>No memory found for "{manualRecall.query}"</span>
+                <button className="recalled-x" onClick={() => setManualRecall(null)}>×</button>
+              </div>
+            ) : (
+              <div className="manual-recall">
+                <div className="recalled-badge">
+                  Search result
+                  <button className="recalled-x" onClick={() => setManualRecall(null)}>×</button>
+                </div>
+                <div className="memory-entry recalled-entry">
+                  <img
+                    className="memory-thumb"
+                    src={manualRecall.thumbnail}
+                    alt={manualRecall.location_label}
+                    onClick={() => setLightbox(manualRecall.thumbnail)}
+                  />
+                  <div className="memory-meta">
+                    <div className="memory-loc">📍 {manualRecall.location_label}</div>
+                    <p className="memory-desc">{manualRecall.description}</p>
+                    <div className="chips">
+                      {(manualRecall.objects ?? []).slice(0, 4).map((o, i) => <span key={i} className="chip">{o}</span>)}
+                    </div>
+                    <div className="memory-time">{fmtRelative(manualRecall.timestamp)}</div>
+                  </div>
+                </div>
+              </div>
+            )
+          )}
 
           {filteredTimeline.length === 0 && (
             <p className="search-empty">No memories match "{searchQuery}"</p>
