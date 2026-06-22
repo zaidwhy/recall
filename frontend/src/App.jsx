@@ -358,7 +358,28 @@ export default function App() {
     setTimeline([]);
     setIngestCount(0);
     setRecalled(null);
+    setManualRecall(null);
   }, [timeline.length]);
+
+  const searchMemory = useCallback(async () => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSearching(true);
+    setManualRecall(null);
+    try {
+      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const data = await r.json();
+      if (data.matches?.length > 0) {
+        setManualRecall(data.matches[0]);
+      } else {
+        setManualRecall({ notFound: true, query: q });
+      }
+    } catch {
+      setManualRecall({ notFound: true, query: q });
+    } finally {
+      setSearching(false);
+    }
+  }, [searchQuery]);
 
   const startVoice = useCallback(async () => {
     const ws = wsRef.current;
