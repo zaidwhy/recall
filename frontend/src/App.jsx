@@ -601,8 +601,8 @@ export default function App() {
       {/* Transcript */}
       {(userText || assistantText) && (
         <div className="transcript">
-          {userText && <p className="t-you">"{userText}"</p>}
-          {assistantText && <p className="t-recall">{assistantText}</p>}
+          {userText && <p className="t-bubble t-you">"{userText}"</p>}
+          {assistantText && <p className="t-bubble t-recall">{assistantText}</p>}
         </div>
       )}
 
