@@ -538,7 +538,7 @@ Data flow for memory retrieval:
 
 ---
 
-## 13. Pending / Next Steps
+## 14. Pending / Next Steps
 
 ### Immediate (can do anytime)
 - [ ] **Phone-test `list_locations` tool** — ask "What have you seen?" with voice → verify spoken sentence lists locations correctly, no clash with `recall_memory` dispatch — **MED**
