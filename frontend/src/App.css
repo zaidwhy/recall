@@ -586,8 +586,8 @@ button.ghost:hover:not(:disabled) {
 
 /* PTT orb */
 .ptt {
-  width: 124px;
-  height: 124px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   background: var(--panel);
   border: 2px solid var(--panel-border);
@@ -595,13 +595,13 @@ button.ghost:hover:not(:disabled) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   cursor: pointer;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
   position: relative;
-  transition: background 0.15s, border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+  transition: background 0.15s, border-color 0.2s, box-shadow 0.2s, transform 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -615,28 +615,28 @@ button.ghost:hover:not(:disabled) {
 
 .ptt:hover:not(.ptt--active) {
   border-color: rgba(96, 165, 250, 0.35);
-  box-shadow: 0 0 20px rgba(96, 165, 250, 0.08);
+  box-shadow: 0 0 24px rgba(96, 165, 250, 0.1);
 }
 
 .ptt--active {
   background: var(--purple-dim);
   border-color: var(--purple);
   box-shadow:
-    0 0 0 8px rgba(167, 139, 250, 0.07),
-    0 0 44px rgba(167, 139, 250, 0.28);
-  transform: scale(1.04);
+    0 0 0 10px rgba(167, 139, 250, 0.07),
+    0 0 60px rgba(167, 139, 250, 0.32);
+  transform: scale(1.05);
 }
 
 .ptt--active::before {
-  inset: -16px;
-  border: 1px solid rgba(167, 139, 250, 0.28);
-  animation: ring-out 1.4s ease-out infinite;
+  inset: -20px;
+  border: 1px solid rgba(167, 139, 250, 0.32);
+  animation: ring-out 1.5s ease-out infinite;
 }
 
 .ptt--active::after {
-  inset: -32px;
-  border: 1px solid rgba(167, 139, 250, 0.12);
-  animation: ring-out 1.4s ease-out infinite 0.35s;
+  inset: -40px;
+  border: 1px solid rgba(167, 139, 250, 0.14);
+  animation: ring-out 1.5s ease-out infinite 0.4s;
 }
 
 @keyframes ring-out {
