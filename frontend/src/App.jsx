@@ -569,6 +569,13 @@ export default function App() {
             <button className="voice-start" onClick={startVoice}>🎙 Enable voice</button>
           ) : (
             <div className="ptt-area">
+              {talking && (
+                <div className="waveform">
+                  {[...Array(7)].map((_, i) => (
+                    <div key={i} className="wave-bar" style={{ "--i": i }} />
+                  ))}
+                </div>
+              )}
               <button
                 className={`ptt${talking ? " ptt--active" : ""}`}
                 onPointerDown={startTalk}
