@@ -504,7 +504,7 @@ Data flow for memory retrieval:
 
 ---
 
-## 11. File-by-File Ownership
+## 12. File-by-File Ownership
 
 | File | Purpose | Key constants/functions |
 |------|---------|------------------------|
