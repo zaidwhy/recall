@@ -449,6 +449,19 @@ Make the UI dramatically more impressive for demo video and recruiter portfolio 
 - JS: 161 KB (unchanged)
 - Build time: 838 ms ✅
 
+### Follow-up: Phone UX Polish (same session)
+
+Three targeted changes for the live-phone demo experience:
+
+| Change | Detail |
+|--------|--------|
+| **Camera shutter controls** | Replaced 3-button flat row with `.cam-controls`: 80px white circle shutter (morphs to red square when recording) + flanking `.ctrl-icon` pill buttons (✦ Analyze, ✕ End). Looks like a real camera app. |
+| **Camera vignette** | `stage::after` radial + bottom-fade gradient. Dark edges frame the live feed, making it feel cinematic rather than a plain black rectangle. |
+| **Larger PTT orb** | 124 → 140px; ring animations extend further (`-20px`, `-40px` inset); glow box-shadow strengthened. The key voice-interaction moment is now more dramatic. |
+
+- CSS: 18 KB → 20 KB gzip-4.96 KB
+- All changes auto-committed and pushed to `master`
+
 ---
 
 ## 10. Architecture Overview (current)
