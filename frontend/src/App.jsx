@@ -496,9 +496,15 @@ export default function App() {
       )}
 
       {/* Camera */}
-      <div className="stage">
+      <div className={`stage${scanning ? " stage--scanning" : ""}`}>
         <video ref={videoRef} playsInline autoPlay muted />
         <canvas ref={canvasRef} hidden />
+
+        {/* Viewfinder corners */}
+        {running && <div className="vf-corner vf-tl" />}
+        {running && <div className="vf-corner vf-tr" />}
+        {running && <div className="vf-corner vf-bl" />}
+        {running && <div className="vf-corner vf-br" />}
 
         {/* Scanning overlay */}
         {running && recording && scanning && <div className="scan-overlay" />}
