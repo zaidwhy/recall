@@ -531,15 +531,23 @@ export default function App() {
         {!running ? (
           <button className="primary" onClick={start}>Start camera</button>
         ) : (
-          <>
-            <button className={recording ? "record recording" : "record"} onClick={toggleRecord}>
-              {recording ? "⏹ Stop" : "⏺ Record"}
+          <div className="cam-controls">
+            <button className="ctrl-icon" onClick={analyzeFrame} disabled={analyzing} title="Analyze frame">
+              <span className="ctrl-icon-glyph">{analyzing ? "…" : "✦"}</span>
+              <span className="ctrl-label">Analyze</span>
             </button>
-            <button className="ghost small" onClick={analyzeFrame} disabled={analyzing}>
-              {analyzing ? "…" : "Analyze"}
+            <button
+              className={`ctrl-shutter${recording ? " shutter-recording" : ""}`}
+              onClick={toggleRecord}
+              title={recording ? "Stop recording" : "Start recording"}
+            >
+              <span className="shutter-inner" />
             </button>
-            <button className="danger small" onClick={stop}>End</button>
-          </>
+            <button className="ctrl-icon ctrl-end" onClick={stop} title="End session">
+              <span className="ctrl-icon-glyph">✕</span>
+              <span className="ctrl-label">End</span>
+            </button>
+          </div>
         )}
       </div>
 
