@@ -523,7 +523,7 @@ Data flow for memory retrieval:
 
 ---
 
-## 12. Dead Ends — Never Retry
+## 13. Dead Ends — Never Retry
 
 | Approach | Why it fails |
 |----------|-------------|
