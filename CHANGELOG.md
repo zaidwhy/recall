@@ -4,6 +4,23 @@ All notable changes to this project. Each entry maps to a dev session / week.
 
 ---
 
+## Phone UX Polish (2026-06-23)
+
+### Changed — `frontend/src/App.jsx`
+- Controls while running: replaced 3-button row (`Record / Analyze / End`) with **camera shutter layout** (`cam-controls`): large circular shutter button flanked by `.ctrl-icon` pill buttons for Analyze (✦) and End (✕)
+- Shutter button morphs: white ring → solid red with rounded-square icon when recording
+- Waveform: 7 bars (was cosmetic-only fix)
+
+### Changed — `frontend/src/App.css`
+- **Camera vignette** (`stage::after`): radial + bottom-fade gradient overlay — gives the live feed a cinematic, depth-of-field look; sits at `z-index:2` so viewfinder HUD elements remain on top
+- **Camera shutter controls** (`.cam-controls`, `.ctrl-shutter`, `.ctrl-icon`, `.ctrl-end`, `.shutter-inner`): shutter button 80px circle; `.shutter-inner` transitions from full circle → rounded square when recording (0.22s cubic-bezier spring); End button has danger-tinted border
+- **PTT orb** enlarged: `124px → 140px`; icon `2.1rem → 2.4rem`; ring `::before` inset `-16 → -20`, `::after` inset `-32 → -40`; glow `box-shadow` strengthened
+
+### Build
+- CSS: 18 KB → 20 KB (gzip 4.96 KB)
+
+---
+
 ## UI Overhaul (2026-06-23)
 
 ### Changed — `frontend/src/App.css` (complete redesign)
