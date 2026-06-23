@@ -488,7 +488,7 @@ Data flow for memory retrieval:
 
 ---
 
-## 10. Permanent Rules and Constraints
+## 11. Permanent Rules and Constraints
 
 | Rule | Reason |
 |------|--------|
