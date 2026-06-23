@@ -644,11 +644,11 @@ button.ghost:hover:not(:disabled) {
   100% { transform: scale(1.06); opacity: 0; }
 }
 
-.ptt-icon { font-size: 2.1rem; line-height: 1; }
+.ptt-icon { font-size: 2.4rem; line-height: 1; }
 .ptt--active .ptt-icon { color: var(--purple); animation: pulse 0.9s ease-in-out infinite; }
 
 .ptt-label {
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.9px;
