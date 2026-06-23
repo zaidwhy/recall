@@ -4,6 +4,39 @@ All notable changes to this project. Each entry maps to a dev session / week.
 
 ---
 
+## UI Overhaul (2026-06-23)
+
+### Changed — `frontend/src/App.css` (complete redesign)
+- Background: richer deep-navy with dual radial gradients (blue top, purple side-pocket)
+- Header: `header-brand` flex wrapper with `header-icon` (rounded square) + wider gradient title (white → blue → purple); `filter: drop-shadow` glow on h1
+- Status chip: top-right live/offline indicator with pulsing green dot when WebSocket is open
+- Stats bar: values highlighted with `.stats-value` (accent blue), pill becomes self-centered
+- Camera `stage`: subtle outer glow + stronger shadow; scan overlay rewritten as moving scan line sweep (absolute pseudo-element)
+- Viewfinder corners (`.vf-corner .vf-tl/tr/bl/br`): L-shaped corner markers in camera HUD style; glow and pulse when scanning (`.stage--scanning`)
+- Recording pill: now centered (left:50% transform:translateX(-50%)) with colored glow on border
+- Voice `voice-start` button: purple gradient + purple glow hover
+- PTT orb: enlarged to 124px, purple active state, two animated `::before`/`::after` ring-pulse rings when listening
+- Waveform bars (`.waveform` / `.wave-bar`): 7-bar equalizer with blue→purple gradient, staggered wave animation; shown above PTT when talking
+- Transcript: removed container panel; each message is now an independent chat bubble (`.t-bubble`) — user text aligns left, Recall answers align right with purple glass background
+- Recalled spotlight: stronger gradient background, drop-shadow glow on both border and container; scale entrance animation
+- Memory cards: hover lift (`box-shadow + border-color` transition); thumbnail scale-on-hover; location-group dot now has glow
+- Chips: darker glass background
+- Lightbox: stronger blur and shadow, blue-tint close button
+- Animations: `float` (empty state), `ring-out` (PTT rings), `wave` (waveform bars), `corner-glow` (viewfinder), `scan-line` (camera sweep); all polished with cubic-bezier easing
+
+### Changed — `frontend/src/App.jsx`
+- Header: replaced plain `<h1>` with `.header-brand` (icon + title); added `.status-chip` (Live/Offline pill, hidden before camera starts)
+- Stats bar: numbers wrapped in `.stats-value` spans for accent-color highlighting
+- Stage: added `.stage--scanning` class to drive CSS viewfinder animation; added 4 `.vf-corner` divs (shown only while running)
+- Waveform: 7 `.wave-bar` divs (with `--i` CSS custom property for stagger) rendered above PTT when `talking === true`
+- Transcript: added `.t-bubble` class to both `<p>` tags so they render as chat bubbles
+
+### Build
+- CSS: 12 KB → 18 KB (gzip 4.6 KB) — all new visual effects
+- JS: unchanged 161 KB
+
+---
+
 ## Week 3 Refinement (2026-06-19)
 
 ### Added
