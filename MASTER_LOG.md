@@ -3,7 +3,7 @@
 **Project:** Recall — AI with photographic memory of the physical world  
 **Repo:** github.com/syzayd/recall  
 **Stack:** FastAPI · Gemini Flash (vision) · Gemini Live (voice) · ChromaDB · Vite/React  
-**Started:** 2026-06-16 · **Last updated:** 2026-06-22  
+**Started:** 2026-06-16 · **Last updated:** 2026-06-23  
 
 ---
 
@@ -17,7 +17,8 @@
 6. [UX + Rate-Limit Infrastructure Session (2026-06-18)](#6-ux--rate-limit-infrastructure-session-2026-06-18)
 7. [Week 3 Refinement (2026-06-19)](#7-week-3-refinement-2026-06-19)
 8. [Week 4 — Object-Centric Memory + Search API (2026-06-22)](#8-week-4--object-centric-memory--search-api-2026-06-22)
-9. [Architecture Overview (current)](#9-architecture-overview-current)
+9. [UI Overhaul — Premium Redesign (2026-06-23)](#9-ui-overhaul--premium-redesign-2026-06-23)
+10. [Architecture Overview (current)](#10-architecture-overview-current)
 10. [Permanent Rules and Constraints](#10-permanent-rules-and-constraints)
 11. [File-by-File Ownership](#11-file-by-file-ownership)
 12. [Dead Ends — Never Retry](#12-dead-ends--never-retry)
