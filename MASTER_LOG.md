@@ -406,7 +406,48 @@ py -m eval.benchmark --dry-run  # print only
 
 ---
 
-## 9. Architecture Overview (current)
+## 9. UI Overhaul — Premium Redesign (2026-06-23)
+
+**Branch:** master
+
+### Goal
+Make the UI dramatically more impressive for demo video and recruiter portfolio view — while keeping all existing functionality identical.
+
+### Changes
+
+#### `frontend/src/App.css` (complete rewrite)
+- **Background**: dual radial gradients (blue top, purple side) — deep navy, not flat black
+- **Header**: `.header-brand` flex wrapper with `.header-icon` (38px rounded square, accent border + shadow) and 2.5rem 900-weight gradient title (white→blue→purple) with `drop-shadow` glow
+- **Status chip**: top-right Live/Offline pill; pulsing green dot when WS is connected
+- **Stats bar**: values wrapped in `.stats-value` (accent blue), self-centered pill style
+- **Camera viewfinder**: L-shaped corner markers (`.vf-corner`) with 0.55 opacity at rest; animated glow when scanning via `.stage--scanning`
+- **Scan overlay**: rewritten as a moving scan-line sweep (`::after` pseudo-element sweeping top to bottom at 1.8s)
+- **Recording pill**: centered (not left-anchored), colored border glow per state (red/amber/blue)
+- **PTT orb**: 124px, purple when active, two `::before`/`::after` ring-pulse animations (`.ring-out`) radiating outward
+- **Waveform bars**: 7 `.wave-bar` divs with blue→purple gradient and staggered `wave` animation, shown above PTT when talking
+- **Transcript**: removed container panel; user message = left-aligned glass bubble; Recall answer = right-aligned purple gradient bubble
+- **Voice button**: purple gradient + glow; purple accent throughout voice section
+- **Recalled spotlight**: gradient background, dual-layer box-shadow, scale+translateY entrance
+- **Memory cards**: hover lift animation; thumbnail scales on hover; location-group dot glows
+- **Lightbox**: stronger blur (18px) + shadow + blue-tint border
+- **Animations**: `float` (empty state), `ring-out` (PTT), `wave` (waveform), `corner-glow` (viewfinder), `scan-line` (camera sweep)
+
+#### `frontend/src/App.jsx`
+- Header wrapped in `.header-brand` + `.header-icon` + `.status-chip` (Live/Offline)
+- Stats numbers wrapped in `.stats-value`
+- Stage div gets `.stage--scanning` class
+- 4 viewfinder corner divs rendered when `running`
+- Waveform bars rendered above PTT when `talking` (7 bars with `--i` CSS custom property for stagger delay)
+- Transcript `<p>` tags get `.t-bubble` class for chat-bubble layout
+
+### Build result
+- CSS: 12 KB → 18 KB gzip-4.6 KB
+- JS: 161 KB (unchanged)
+- Build time: 838 ms ✅
+
+---
+
+## 10. Architecture Overview (current)
 
 ```
 Phone (HTTPS via cloudflared quick tunnel)
