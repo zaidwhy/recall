@@ -434,19 +434,28 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1>Recall</h1>
+        <div className="header-brand">
+          <div className="header-icon">🧠</div>
+          <h1>Recall</h1>
+        </div>
+        {running && (
+          <div className="status-chip">
+            <span className={`status-dot${wsState === "open" ? " status-live" : ""}`} />
+            {wsState === "open" ? "Live" : wsState === "connecting" ? "Connecting" : "Offline"}
+          </div>
+        )}
         <p className="tag">
           {recording
-            ? scanning ? "scanning…" : countdown > 0 ? `next scan in ${countdown}s` : "see once · remember always"
+            ? scanning ? "scanning scene…" : countdown > 0 ? `next scan in ${countdown}s` : "see once · remember always"
             : "see once · remember always"}
         </p>
       </header>
 
       {timeline.length > 0 && (
         <div className="stats-bar">
-          <span>{timeline.length} {timeline.length === 1 ? "memory" : "memories"}</span>
+          <span><span className="stats-value">{timeline.length}</span> {timeline.length === 1 ? "memory" : "memories"}</span>
           <span className="stats-dot">·</span>
-          <span>{distinctLocations} {distinctLocations === 1 ? "location" : "locations"}</span>
+          <span><span className="stats-value">{distinctLocations}</span> {distinctLocations === 1 ? "location" : "locations"}</span>
         </div>
       )}
 
