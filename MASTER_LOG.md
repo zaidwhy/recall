@@ -605,3 +605,14 @@ cloudflared tunnel --url http://localhost:8000
 ---
 
 *Last updated: 2026-06-22 — Week 4 session (object-centric memory + /api/search + "Ask" UI)*
+
+---
+
+## 2026-07-02 - Refinement pass (env repair + repo hygiene + README visual)
+
+- **Environment repair:** chromadb had gone missing from the global Python install, so the backend could not import. Reinstalled; all five backend modules verified importing clean.
+- **Repo hygiene:** the untracked "how torunforuser" cheatsheet became a proper HOW_TO_RUN.md (three-terminal sequence, phone steps, quota notes). Em dashes purged from README, CHANGELOG, every backend module, the eval harness, and UI copy; frontend rebuilt so the served bundle matches source.
+- **First README visual:** docs/screenshots/start-screen.png (phone-format crop of the live start screen) embedded at the top. A populated-timeline shot is deferred to the next real phone demo session; seeding fake memories for a screenshot was considered and rejected as misrepresentative.
+- Verified: backend imports OK, frontend builds clean. Pushed as 27a5163.
+
+*Last updated: 2026-07-02 - refinement pass*
