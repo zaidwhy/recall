@@ -1,9 +1,9 @@
-"""Recall backend — FastAPI app.
+"""Recall backend - FastAPI app.
 
 Single-origin design (the key to mobile capture): this one server both serves the
 built frontend (frontend/dist) AND exposes the /ws WebSocket. When fronted by a
 cloudflared quick tunnel, the phone loads an https page and the WebSocket upgrades
-to wss automatically — no mixed-content, no second tunnel.
+to wss automatically - no mixed-content, no second tunnel.
 
 Week 2 additions: always-on ingestion loop (record_start / record_stop), ChromaDB
 memory store, /memory GET+DELETE endpoints, /thumbnails static serving.
@@ -40,14 +40,14 @@ DATA_DIR.mkdir(exist_ok=True)
 THUMBS_DIR.mkdir(exist_ok=True)
 
 # Poll interval for the ingest loop. Flash is only called when the scene actually
-# changes AND the minimum gap has elapsed — so this is the check frequency, not the call rate.
+# changes AND the minimum gap has elapsed - so this is the check frequency, not the call rate.
 INGEST_INTERVAL_S = 5
 
 # Hard floor between Gemini Flash calls (vision + analyze combined).
 # gemini-2.5-flash free tier: 20 RPD. 120s floor → max 1 call/2 min → 10 calls in a 20-min demo session.
 FLASH_MIN_GAP_S = 120
 
-# Tracks the last time we made a Gemini Flash call — shared across ingest loop and analyze handler.
+# Tracks the last time we made a Gemini Flash call - shared across ingest loop and analyze handler.
 _last_flash_call: float = 0.0
 _next_scan_at: float = 0.0           # earliest wall-clock time the next Flash call is allowed
 _flash_calls_today: int = 0          # resets on server restart; used for on-screen budget display
@@ -134,7 +134,7 @@ async def api_stats() -> JSONResponse:
 
 @app.get("/api/search")
 async def api_search(q: str = "") -> JSONResponse:
-    """Recall search from the UI — returns top 3 matches with thumbnails."""
+    """Recall search from the UI - returns top 3 matches with thumbnails."""
     if not q.strip():
         return JSONResponse({"error": "q is required"}, status_code=400)
     result = await asyncio.to_thread(memory.recall_for_tool, q.strip())
@@ -210,7 +210,7 @@ async def _ingest_loop(websocket: WebSocket) -> None:
             reason = _flash_blocked()
             if reason:
                 if _flash_calls_today >= FLASH_DAILY_BUDGET:
-                    log.warning("daily Flash budget (%d) reached — pausing ingestion", FLASH_DAILY_BUDGET)
+                    log.warning("daily Flash budget (%d) reached - pausing ingestion", FLASH_DAILY_BUDGET)
                     await asyncio.sleep(300)
                 else:
                     log.debug("flash gated: %s", reason)
@@ -249,7 +249,7 @@ async def _ingest_loop(websocket: WebSocket) -> None:
                 wait = int(m.group(1)) + 5 if m else 65
                 log.warning("rate limited by Gemini (%s quota); sleeping %ds", perception.VISION_MODEL, wait)
                 try:
-                    await websocket.send_json({"type": "error", "detail": f"Rate limited — pausing ingestion for {wait}s"})
+                    await websocket.send_json({"type": "error", "detail": f"Rate limited - pausing ingestion for {wait}s"})
                 except Exception:
                     pass
                 await asyncio.sleep(wait)
@@ -402,7 +402,7 @@ app.mount("/thumbnails", StaticFiles(directory=str(THUMBS_DIR)), name="thumbnail
 if DIST_DIR.is_dir():
     app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="frontend")
 else:
-    log.warning("frontend/dist not found — run `npm run build` in frontend/ for the mobile path")
+    log.warning("frontend/dist not found - run `npm run build` in frontend/ for the mobile path")
 
     @app.get("/")
     async def no_build() -> JSONResponse:

@@ -1,4 +1,4 @@
-"""Ingestion path (cheap) — turn a sampled camera frame into a structured observation.
+"""Ingestion path (cheap) - turn a sampled camera frame into a structured observation.
 
 Uses standard Gemini Flash vision (generous free RPD), NOT the Live API, so ingestion
 stays inside the free tier. Week 1 hello-world #2 proves the frame -> observation round-trip;
@@ -28,7 +28,7 @@ _PROMPT = (
     "Keep the description to one factual sentence."
 )
 
-# Scene-change detection — compare downscaled grayscale frames.
+# Scene-change detection - compare downscaled grayscale frames.
 _SCENE_THRESHOLD = 12.0  # mean absolute pixel diff (0–255 scale); tune if too noisy
 _DOWNSCALE = (64, 48)
 _last_gray: np.ndarray | None = None
@@ -44,7 +44,7 @@ class Observation(BaseModel):
 def _client() -> genai.Client:
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
-        raise RuntimeError("GEMINI_API_KEY not set — add it to .env")
+        raise RuntimeError("GEMINI_API_KEY not set - add it to .env")
     return genai.Client(api_key=key)
 
 

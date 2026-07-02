@@ -1,4 +1,4 @@
-# Recall backend — Week 1 core
+# Recall backend - Week 1 core
 fastapi>=0.115
 uvicorn[standard]>=0.30
 python-dotenv>=1.0
@@ -9,6 +9,6 @@ pillow>=10.4
 google-genai>=0.8
 
 # Memory store (Week 2). Verified working on Python 3.14 (chromadb 1.5.9).
-# Ships a local ONNX embedding model (all-MiniLM-L6-v2) — embeddings are free + offline.
+# Ships a local ONNX embedding model (all-MiniLM-L6-v2) - embeddings are free + offline.
 chromadb>=1.5
 numpy>=1.26

@@ -1,6 +1,6 @@
-"""Eval harness — staged object placements → scripted questions → recall@1/@3 + latency.
+"""Eval harness - staged object placements → scripted questions → recall@1/@3 + latency.
 
-Usage (run in your own PowerShell — onnxruntime is blocked in Claude Code's Bash):
+Usage (run in your own PowerShell - onnxruntime is blocked in Claude Code's Bash):
     python -m eval.benchmark           # run and update README.md
     python -m eval.benchmark --dry-run # print report only, do NOT touch README
 
@@ -282,7 +282,7 @@ def update_readme(report: str, readme: Path = README) -> None:
 
 def main() -> None:
     import sys
-    # Windows Git Bash / cp1252 consoles can't print ✓/✗ — force UTF-8 if possible
+    # Windows Git Bash / cp1252 consoles can't print ✓/✗ - force UTF-8 if possible
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 

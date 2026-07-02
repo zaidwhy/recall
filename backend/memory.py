@@ -1,4 +1,4 @@
-"""Episodic memory store — ChromaDB wrapper.
+"""Episodic memory store - ChromaDB wrapper.
 
 Persistent, local-only. Uses the bundled ONNX embedding model (all-MiniLM-L6-v2)
 so embeddings are free and offline. No Gemini embedding calls needed.
@@ -18,7 +18,7 @@ _CHROMA_PATH = _DATA_DIR / "chroma"
 _THUMBS_DIR = _DATA_DIR / "thumbnails"
 
 # L2 distance threshold for "confident" recall (all-MiniLM-L6-v2, unit vectors → L2 ∈ [0,2]).
-# 1.4 ≈ cosine similarity 0.02 — accepts any semantic overlap. Tune down to ~1.1 if false positives appear.
+# 1.4 ≈ cosine similarity 0.02 - accepts any semantic overlap. Tune down to ~1.1 if false positives appear.
 RECALL_MAX_DISTANCE = 1.4
 
 # Recency blend: score = distance + DECAY_WEIGHT * log(1 + hours_ago).
@@ -176,7 +176,7 @@ def recall_for_tool(query: str, since: float | None = None, until: float | None 
     seen_ids = {c["id"] for c in candidates}
     for e in find_by_object(query, limit=5, since=since, until=until):
         if e["id"] not in seen_ids:
-            e["distance"] = 0.5  # exact name match — treat as high-confidence
+            e["distance"] = 0.5  # exact name match - treat as high-confidence
             candidates.append(e)
             seen_ids.add(e["id"])
     for c in candidates:

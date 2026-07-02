@@ -1,4 +1,4 @@
-"""Interaction path — a Gemini Live voice session relayed over the phone's WebSocket.
+"""Interaction path - a Gemini Live voice session relayed over the phone's WebSocket.
 
 The phone streams mic audio (PCM16 @ 16 kHz) as binary WS frames; we forward them to a
 Gemini Live session and stream the model's spoken reply (PCM @ 24 kHz) back as binary.
@@ -28,12 +28,12 @@ SYSTEM = (
     "user's physical space. You have been watching their home and know exactly where things are.\n\n"
     "RULES:\n"
     "1. For ANY question about where something is, where it was left, or when it was last seen: "
-    "ALWAYS call recall_memory first — never guess or invent a location.\n"
+    "ALWAYS call recall_memory first - never guess or invent a location.\n"
     "2. When confident=true: give a natural, specific spoken answer. Lead with the location and "
-    "time. Example: 'Your keys are on the kitchen counter — I saw them there about 3 minutes ago.'\n"
+    "time. Example: 'Your keys are on the kitchen counter - I saw them there about 3 minutes ago.'\n"
     "3. When confident=false or no matches: be honest and brief. Say you haven't seen it yet.\n"
     "4. One or two sentences max. No filler phrases like 'based on my data' or 'according to my "
-    "records' — speak like a person who actually remembers, not a database.\n"
+    "records' - speak like a person who actually remembers, not a database.\n"
     "5. If multiple matches exist, mention the most recent one first."
 )
 

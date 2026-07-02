@@ -266,7 +266,7 @@ export default function App() {
       setScanning(false);
     };
 
-    ws.onerror = () => setError("WebSocket error — is the backend running on this origin?");
+    ws.onerror = () => setError("WebSocket error - is the backend running on this origin?");
   }, []);
 
   const reconnectWs = useCallback(() => {
@@ -312,7 +312,7 @@ export default function App() {
       setError(
         e?.name === "NotAllowedError"
           ? "Camera/mic permission denied. Grant access and retry."
-          : `Could not start: ${e?.message || e}. (Needs HTTPS — use the tunnel URL.)`
+          : `Could not start: ${e?.message || e}. (Needs HTTPS - use the tunnel URL.)`
       );
       stop();
     }
@@ -461,19 +461,19 @@ export default function App() {
 
       {!secure && (
         <div className="warn">
-          Not a secure context — camera will fail. Open the
+          Not a secure context - camera will fail. Open the
           <code> https://*.trycloudflare.com </code> tunnel URL instead.
         </div>
       )}
 
-      {/* Onboarding — shown only before camera starts */}
+      {/* Onboarding - shown only before camera starts */}
       {!running && (
         <div className="onboarding">
           <div className="ob-step">
             <div className="ob-num">1</div>
             <div className="ob-body">
               <strong>Start camera</strong>
-              <span>Point your phone at the room — recording starts automatically</span>
+              <span>Point your phone at the room - recording starts automatically</span>
             </div>
           </div>
           <div className="ob-divider" />
@@ -554,7 +554,7 @@ export default function App() {
       {/* Reconnect banner */}
       {running && wsState === "closed" && (
         <div className="ws-banner">
-          Connection lost —
+          Connection lost  - 
           <button className="ws-reconnect" onClick={reconnectWs}>Reconnect</button>
         </div>
       )}
@@ -565,7 +565,7 @@ export default function App() {
           <div className="er-icon">👁</div>
           <p>Recall is watching. Move to a new spot to trigger the first scan.</p>
           <p className="er-sub">
-            {countdown > 0 ? `Next scan available in ${countdown}s` : "Ready — waiting for a scene change"}
+            {countdown > 0 ? `Next scan available in ${countdown}s` : "Ready - waiting for a scene change"}
           </p>
         </div>
       )}
@@ -590,7 +590,7 @@ export default function App() {
                 onPointerUp={stopTalk}
                 onPointerLeave={stopTalk}
                 onContextMenu={e => e.preventDefault()}
-                aria-label={talking ? "Listening — release to send" : "Hold to ask Recall"}
+                aria-label={talking ? "Listening - release to send" : "Hold to ask Recall"}
               >
                 <span className="ptt-icon">{talking ? "●" : "🎤"}</span>
                 <span className="ptt-label">{talking ? "Listening…" : "Hold to ask"}</span>
@@ -760,7 +760,7 @@ export default function App() {
           <div><dt>Secure</dt><dd>{secure ? "✅" : "❌"}</dd></div>
           <div><dt>WebSocket</dt><dd>{wsState}</dd></div>
           <div><dt>Frames</dt><dd>{framesSent}</dd></div>
-          <div><dt>Last ack</dt><dd>{lastAck ? `#${lastAck.frame} · ${(lastAck.bytes / 1024).toFixed(1)} KB` : "—"}</dd></div>
+          <div><dt>Last ack</dt><dd>{lastAck ? `#${lastAck.frame} · ${(lastAck.bytes / 1024).toFixed(1)} KB` : " - "}</dd></div>
           <div><dt>Voice</dt><dd>{liveState === "open" ? (talking ? "listening" : "ready") : "off"}</dd></div>
           <div><dt>Memories</dt><dd>{timeline.length}</dd></div>
           <div><dt>Flash</dt><dd>{flashCalls}/{flashBudget} calls</dd></div>
