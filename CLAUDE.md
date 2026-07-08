@@ -15,16 +15,18 @@ Terminal 2 - backend (port 8000):
 ```powershell
 cd C:\Users\Asus\projects\recall
 $env:PYTHONIOENCODING = "utf-8"
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
-First log line must be: `Vision model: gemini-2.5-flash | min gap between Flash calls: 120s`
+First log line must be: `Vision model: gemini-2.5-flash | min gap between Flash calls: 120s`. If
+`RECALL_TOKEN` is not set in `.env`, a second line logs a one-off generated token - copy it.
 
 Terminal 3 - tunnel (phone camera/mic require HTTPS):
 ```powershell
 $env:PATH += ";C:\Program Files (x86)\cloudflared"
 cloudflared tunnel --url http://localhost:8000
 ```
-Open the printed `https://*.trycloudflare.com` URL on the phone.
+Open `https://*.trycloudflare.com/?token=<RECALL_TOKEN>` on the phone once - the server sets a
+cookie so later loads on that browser don't need the query param again.
 
 ## Python environment
 
@@ -33,11 +35,16 @@ Open the printed `https://*.trycloudflare.com` URL on the phone.
 
 ## Tests / eval
 
-- No pytest suite. Eval benchmark: `python -m eval.benchmark` (uses an isolated temp ChromaDB, never touches `data/`).
+- `pytest tests/ -q` - offline smoke suite (app import + RECALL_TOKEN auth on HTTP routes and
+  `/ws`; no API key needed). Eval benchmark: `python -m eval.benchmark` (uses an isolated temp
+  ChromaDB, never touches `data/`).
 
 ## Env
 
 - `.env` at repo root needs `GEMINI_API_KEY`; template in `.env.example`. Never read `.env` directly; ask the user for values.
+- `RECALL_TOKEN`: shared secret required on every backend route + `/ws` (the tunnel is public -
+  this is what stops a random URL guess from reading or wiping memories). Set a stable value in
+  `.env`, or let the server generate and log a one-off one each restart.
 - Vision model defaults to `gemini-2.5-flash`. Free-tier quota is 20 vision calls/day; the ingest loop stops at 18 to keep 2 in reserve. Do NOT enable billing - it removes the free tier.
 
 ## Logs and handoffs (required every session)
