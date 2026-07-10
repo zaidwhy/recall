@@ -58,7 +58,7 @@ Existing "AI memory" tools (Rewind, Limitless) capture **screen + audio**. Recal
 
 ## 5. Tech foundation (verified June 2026)
 
-- **Gemini Live API** (`gemini-2.5-flash-live` / `gemini-3.1-flash-live`) — natively streams **video + audio + text in one session** (~200ms latency), supports **async function calling/tools**, and has a **free tier**. Strongest multimodal/video breadth, "orders of magnitude cheaper" than OpenAI Realtime. On-brand with the existing Gemini setup.
+- **Gemini Live API** — verified working free-tier model is **`gemini-3.1-flash-live-preview`** (the earlier-assumed `gemini-2.5-flash-live` id does **not** exist). Natively streams **video + audio + text in one session** (~200ms latency), supports **async function calling/tools**, and has a **free tier**. Strongest multimodal/video breadth, "orders of magnitude cheaper" than OpenAI Realtime. On-brand with the existing Gemini setup. (Push-to-talk uses **manual activity detection**, not automatic VAD.)
 - **Free-tier rule (critical):** keep billing **OFF** on the Gemini project — enabling billing deletes the free tier entirely.
 
 ### Decoupled architecture (key design decision from plan review)
@@ -79,7 +79,8 @@ Do **not** run a persistent always-on Live session to "watch" the room — sessi
 - **Backend:** Python 3.x + **FastAPI** (WebSocket relay) + `google-genai` SDK (Live API). Reuse `.env` / `GEMINI_API_KEY` pattern + gitignore conventions from the Resume Job-Fit AI project.
 - **Memory store:** **ChromaDB** (local, free, persistent) — observation embeddings + metadata (object, location label, timestamp, thumbnail path).
 - **Embeddings:** Gemini embeddings (free tier) or local `sentence-transformers` fallback.
-- **Frontend:** lightweight **Vite + React** (or vanilla JS) using `getUserMedia` for camera/mic, WebSocket to backend. Scaffold from official **`google-gemini/gemini-live-api-examples`**.
+- **Frontend:** lightweight **mobile-first Vite + React** (or vanilla JS) using `getUserMedia` (**rear camera**, `facingMode: 'environment'`) for camera/mic, WebSocket to backend. For the demo/mobile path, the **built frontend is served by FastAPI on a single port** so one origin (and one tunnel) covers both the page and the WebSocket. Scaffold from official **`google-gemini/gemini-live-api-examples`**.
+- **Tunnel:** **`cloudflared`** quick tunnel for mobile testing (free, no signup, valid HTTPS cert — required because `getUserMedia` needs a secure context). See §13.
 - **Repo:** `github.com/syzayd/recall`, build-in-public, README with demo GIF + metrics + architecture diagram.
 - **Deploy (optional):** frontend on Vercel/GitHub Pages; backend on Render free tier or Hugging Face Spaces. The **recorded demo video is the primary artifact**, so live deploy is optional.
 
@@ -87,7 +88,7 @@ Do **not** run a persistent always-on Live session to "watch" the room — sessi
 
 ## 7. Architecture
 
-1. **Capture layer (frontend):** browser captures mic audio + sampled video frames over WebSocket; renders live camera view, memory timeline/gallery, record toggle, voice/chat panel.
+1. **Capture layer (frontend, on the phone):** the **phone's rear camera** + mic capture audio and sampled video frames over WebSocket; renders live camera view, memory timeline/gallery, record toggle, voice/chat panel. The page and the WebSocket share **one origin** (FastAPI serves the built frontend on the same port as `/ws`) so a single `cloudflared` tunnel covers both with valid HTTPS/`wss` — see §13.
 2. **Ingestion path (cheap, always-on while recording):** scene-change frame → **Gemini Flash vision** → structured observation `{objects, location_label, description, timestamp, thumbnail}` → embed → store in ChromaDB.
 3. **Interaction path (Live, on demand):** user speaks a query → open **Gemini Live session** → close when idle.
 4. **Retrieval tool (the moat):** Live session uses **function calling** — `recall_memory(query)` (semantic + temporal search) and `log_observation(...)`. Model composes a natural spoken reply, optionally surfacing the remembered frame.
@@ -97,7 +98,7 @@ Do **not** run a persistent always-on Live session to "watch" the room — sessi
 
 ## 8. Build phases (3–6 weeks)
 
-- **Week 1 — Two hello-worlds:** (a) frontend camera/mic capture + FastAPI WebSocket; (b) frame → Gemini Flash vision → structured observation round-trip, and a Gemini Live voice round-trip. Prove both paths cheaply.
+- **Week 1 — Two hello-worlds (mobile path first):** (a) **phone** camera/mic capture → FastAPI WebSocket **over the cloudflared tunnel** — prove the mobile capture path first, since it's now the foundational/riskiest piece; (b) frame → Gemini Flash vision → structured observation round-trip, and a Gemini Live voice round-trip. Prove both paths cheaply.
 - **Week 2 — Memory ingestion:** scene-change frame sampling → observation pipeline → ChromaDB store + thumbnails + timeline UI + record toggle.
 - **Week 3 — The magic:** `recall_memory` retrieval tool wired into the Live session via function calling; "where/when" voice Q&A working out loud with remembered frame.
 - **Week 4 — Make it credible:** eval harness + recall@k/latency metrics; quota tuning + privacy/delete controls.
@@ -120,7 +121,7 @@ Do **not** run a persistent always-on Live session to "watch" the room — sessi
 
 ## 10. Verification
 
-- **Functional:** run backend + frontend locally; place objects, ask "where did I put X?" / "when did I last see Y?" — confirm correct spoken answers + correct remembered frame.
+- **Functional (mobile):** `uvicorn backend.main:app --port 8000`, then `cloudflared tunnel --url http://localhost:8000`; open the printed `https://*.trycloudflare.com` URL on the **phone** and grant camera + mic. Confirm rear-camera frames arrive at the backend over `wss`. Then place objects, ask "where did I put X?" / "when did I last see Y?" — confirm correct spoken answers + correct remembered frame.
 - **Quantitative:** run `eval/benchmark.py` → confirm recall@1/@3 and median latency; record in README.
 - **Demo:** record the 60s "lost item → instant recall" video.
 - **Quota safety:** confirm billing stays disabled and a full demo session stays within free-tier limits.
@@ -137,6 +138,45 @@ Do **not** run a persistent always-on Live session to "watch" the room — sessi
 ## 12. Status / next steps
 
 - ✅ Git repo created at `C:\Users\Asus\projects\recall` (initial commit done).
-- ⏳ Plan being refined remotely via **Ultraplan** (cloud agent — needs this git repo, now satisfied).
+- ✅ Plan refined remotely via **Ultraplan** (cloud agent) — mobile-first capture folded in; canonical plan committed as `PLAN.md`.
 - ⬜ Scaffold `backend/` `frontend/` `eval/` + `.gitignore` once ready.
 - ⬜ Begin Week 1 build.
+
+---
+
+## 13. Mobile-first capture & testing (cloud refinement, 2026-06-16)
+
+New constraint: **the dev laptop has no built-in webcam, so the phone is the capture
+device**, and the project should be **portable** (demo from a phone anywhere). This
+reframes a constraint into a feature — the camera you always carry → on-the-go,
+wearable-adjacent memory, a stronger demo story than a tethered laptop.
+
+### The secure-context problem
+Browser camera/mic access (`getUserMedia`) requires a **secure context (HTTPS)**.
+`localhost` is exempt, but a phone hitting the laptop over a LAN IP (`http://192.168.x.x`)
+is **not** secure — the camera silently fails. So mobile testing **requires a public HTTPS
+URL**. (This gap was unaddressed in the original laptop-webcam plan.)
+
+### Decision: cloudflared quick tunnel
+`cloudflared tunnel --url http://localhost:8000` → prints a `https://*.trycloudflare.com`
+URL with a valid cert; works on iOS Safari + Android Chrome with **no account**.
+
+| Option | Verdict |
+|---|---|
+| **cloudflared quick tunnel** | ✅ Chosen — free, no signup, valid cert, reliable on iOS + Android. |
+| ngrok | ❌ Needs an authtoken/account. |
+| Vite self-signed HTTPS on LAN | ❌ iOS Safari frequently blocks the camera on self-signed certs. |
+
+### Single origin = one tunnel
+Serve the **built frontend from FastAPI on :8000** and expose `/ws` on the same port, so the
+phone loads the page and opens the WebSocket on one origin. This avoids a second tunnel and
+mixed-content (`https` page → `ws://`) errors; `wss` is automatic because the page is
+`https`. Portability win: `uvicorn` + one `cloudflared` command = demo on any phone.
+*Dev convenience:* run Vite with `server.proxy` forwarding `/ws` to :8000 and tunnel the
+Vite port for HMR; the demo/mobile path is the FastAPI-static single-origin one.
+
+### Frontend capture specifics
+- `getUserMedia({ video: { facingMode: 'environment' }, audio: true })` → rear camera.
+- `<video playsinline autoplay muted>`; start capture on a **user gesture** (iOS Safari quirk).
+- Derive the WS URL from `window.location` so it becomes `wss://…` through the tunnel.
+- Mobile-first responsive layout.
