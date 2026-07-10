@@ -1,4 +1,4 @@
-"""Ingestion path (cheap) — turn a sampled camera frame into a structured observation.
+"""Ingestion path (cheap) - turn a sampled camera frame into a structured observation.
 
 Uses standard Gemini Flash vision (generous free RPD), NOT the Live API, so ingestion
 stays inside the free tier. Week 1 hello-world #2 proves the frame -> observation round-trip;
@@ -7,10 +7,13 @@ scene-change gating + the always-on ingestion loop come in Week 2.
 
 from __future__ import annotations
 
+import io
 import os
 import time
 from functools import lru_cache
 
+import numpy as np
+from PIL import Image
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
@@ -25,6 +28,11 @@ _PROMPT = (
     "Keep the description to one factual sentence."
 )
 
+# Scene-change detection - compare downscaled grayscale frames.
+_SCENE_THRESHOLD = 12.0  # mean absolute pixel diff (0–255 scale); tune if too noisy
+_DOWNSCALE = (64, 48)
+_last_gray: np.ndarray | None = None
+
 
 class Observation(BaseModel):
     objects: list[str]
@@ -36,8 +44,23 @@ class Observation(BaseModel):
 def _client() -> genai.Client:
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
-        raise RuntimeError("GEMINI_API_KEY not set — add it to .env")
+        raise RuntimeError("GEMINI_API_KEY not set - add it to .env")
     return genai.Client(api_key=key)
+
+
+def has_scene_changed(jpeg_bytes: bytes) -> bool:
+    """True if this frame differs enough from the last accepted frame to warrant re-analysis."""
+    global _last_gray
+    img = Image.open(io.BytesIO(jpeg_bytes)).convert("L").resize(_DOWNSCALE, Image.BILINEAR)
+    gray = np.array(img, dtype=np.float32)
+    if _last_gray is None:
+        _last_gray = gray
+        return True
+    diff = float(np.mean(np.abs(gray - _last_gray)))
+    if diff >= _SCENE_THRESHOLD:
+        _last_gray = gray
+        return True
+    return False
 
 
 def analyze_frame(jpeg_bytes: bytes) -> dict:
