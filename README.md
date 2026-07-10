@@ -98,11 +98,13 @@ pip install -r requirements.txt
 # Add your key to .env
 echo GEMINI_API_KEY=your_key_here > .env
 
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 # First log line should say: Vision model: gemini-2.5-flash | min gap: 120s
+# If RECALL_TOKEN isn't set in .env, the next line logs a one-off generated token - copy it.
 
 # 2. Tunnel  (gives the phone an HTTPS URL - required for camera + mic)
 cloudflared tunnel --url http://localhost:8000
+# Open https://<tunnel>.trycloudflare.com/?token=<RECALL_TOKEN> once - a cookie carries it after that.
 
 # 3. Frontend  (only needed once, or after UI changes)
 cd frontend && npm install && npm run build

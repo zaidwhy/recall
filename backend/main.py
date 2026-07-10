@@ -15,13 +15,16 @@ import asyncio
 import base64
 import json
 import logging
+import os
+import secrets
 import time
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 load_dotenv()
 
@@ -32,6 +35,42 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(me
 log = logging.getLogger("recall")
 
 app = FastAPI(title="Recall", version="0.2.0")
+
+# Shared secret protecting every route + the /ws socket - the cloudflared tunnel is
+# public, so anyone with the URL could otherwise read or wipe camera memories (S1,
+# MASTER-FIX-PLAN.md). Pass it once as `?token=` and the cookie set below carries it
+# for the rest of the browser session (including asset loads and the WS handshake,
+# which both send cookies automatically) - no frontend changes required.
+RECALL_TOKEN = os.environ.get("RECALL_TOKEN")
+if not RECALL_TOKEN:
+    RECALL_TOKEN = secrets.token_urlsafe(24)
+    log.warning("RECALL_TOKEN not set - generated a one-off token for this run: %s", RECALL_TOKEN)
+    log.warning("Set RECALL_TOKEN in .env to keep a stable token across restarts.")
+
+_TOKEN_COOKIE = "recall_token"
+
+
+def _request_token(request: Request) -> str | None:
+    return (
+        request.headers.get("x-recall-token")
+        or request.query_params.get("token")
+        or request.cookies.get(_TOKEN_COOKIE)
+    )
+
+
+class TokenAuthMiddleware(BaseHTTPMiddleware):
+    """Requires RECALL_TOKEN (header, query param, or cookie) on every HTTP route."""
+
+    async def dispatch(self, request: Request, call_next):
+        if _request_token(request) != RECALL_TOKEN:
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        response = await call_next(request)
+        if request.cookies.get(_TOKEN_COOKIE) != RECALL_TOKEN:
+            response.set_cookie(_TOKEN_COOKIE, RECALL_TOKEN, httponly=True, samesite="lax")
+        return response
+
+
+app.add_middleware(TokenAuthMiddleware)
 
 DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -270,6 +309,14 @@ async def ws(websocket: WebSocket) -> None:
     Binary messages: mic audio (PCM16 @ 16 kHz) for an active Live session.
     Binary out: Gemini Live audio (PCM @ 24 kHz). See live.py.
     """
+    token = (
+        websocket.headers.get("x-recall-token")
+        or websocket.query_params.get("token")
+        or websocket.cookies.get(_TOKEN_COOKIE)
+    )
+    if token != RECALL_TOKEN:
+        await websocket.close(code=4401)
+        return
     await websocket.accept()
     peer = websocket.client.host if websocket.client else "?"
     log.info("WS connected from %s", peer)

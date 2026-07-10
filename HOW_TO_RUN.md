@@ -15,10 +15,12 @@ The FastAPI backend serves the built files, so there is no separate dev server t
 
 ```powershell
 cd C:\Users\Asus\projects\recall
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
 The first log line should read: `Vision model: gemini-2.5-flash | min gap between Flash calls: 120s`.
+If `RECALL_TOKEN` isn't set in `.env`, a second line logs a one-off generated token for this run -
+copy it, since every route (and the tunnel) now requires it.
 
 ## Terminal 3 - tunnel (HTTPS for the phone)
 
@@ -31,7 +33,8 @@ cloudflared prints an `https://*.trycloudflare.com` URL. Open that URL on your p
 
 ## On the phone
 
-1. Open the tunnel URL.
+1. Open the tunnel URL with `?token=<RECALL_TOKEN>` appended, once - a cookie carries the token
+   for later visits from that browser (the tunnel is public, so every route now checks it).
 2. Tap **Start camera**. Recording begins automatically.
 3. Point the camera around the room. The pill shows when a scan fires and how many daily vision calls remain.
 4. Hold the circular button and ask out loud, e.g. "where did I leave my keys?" Release to send.
