@@ -1,5 +1,8 @@
 # Recall - an AI with a photographic memory of your world
 
+[![CI](https://github.com/syzayd/recall/actions/workflows/ci.yml/badge.svg)](https://github.com/syzayd/recall/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 Point your phone camera at your space. Ask out loud "where did I leave my keys?" and get a spoken answer with the exact frame it saw them in.
 
 Built on Gemini Live (push-to-talk voice), Gemini Flash (always-on vision), and a local ChromaDB vector store for offline semantic recall.
