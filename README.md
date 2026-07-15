@@ -1,6 +1,9 @@
 # Recall - an AI with a photographic memory of your world
 
 [![CI](https://github.com/syzayd/recall/actions/workflows/ci.yml/badge.svg)](https://github.com/syzayd/recall/actions/workflows/ci.yml)
+![Tests](https://img.shields.io/badge/tests-30%20passed%20offline-brightgreen)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Node](https://img.shields.io/badge/node-18%2B-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Point your phone camera at your space. Ask out loud "where did I leave my keys?" and get a spoken answer with the exact frame it saw them in.
@@ -187,3 +190,16 @@ To reproduce: `python -m eval.benchmark` (creates an isolated temp ChromaDB - ne
 | 5 | UI polish - PTT button, tap-to-ask, search, groups, lightbox | ✅ Done |
 | 6 | Live scanning indicator, countdown timer, auto-record, budget UI, relative time, animations | ✅ Done |
 | 7 | Demo video + LinkedIn build-in-public series | ⬜ Planned |
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). The short version: tests stay offline (no
+`GEMINI_API_KEY` required to run `pytest tests/ -q`), and the vision-quota / rate-limit
+guards in `backend/` are load-bearing - do not relax them without updating the tests
+that pin their behavior.
+
+## License
+
+[MIT](LICENSE).
