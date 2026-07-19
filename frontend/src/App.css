@@ -15,6 +15,7 @@
   --danger: #f87171;
   --danger-dim: #1e0909;
   --green: #34d399;
+  --amber: #fbbf24;
   --text: #e2e8f4;
   --muted: #5a6b8a;
   --muted-bright: #8a9ab8;
@@ -289,7 +290,7 @@ header h1 {
 
 .recording-pill.budget-warn {
   border-color: rgba(251, 191, 36, 0.5);
-  color: #fbbf24;
+  color: var(--amber);
   box-shadow: 0 0 20px rgba(251, 191, 36, 0.07);
 }
 
@@ -681,7 +682,7 @@ button.ghost:hover:not(:disabled) {
 }
 
 .t-bubble {
-  border-radius: 18px;
+  border-radius: var(--radius);
   padding: 11px 16px;
   font-size: 0.92rem;
   line-height: 1.5;
