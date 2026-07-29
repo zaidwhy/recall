@@ -47,6 +47,19 @@ cookie so later loads on that browser don't need the query param again.
   `.env`, or let the server generate and log a one-off one each restart.
 - Vision model defaults to `gemini-2.5-flash`. Free-tier quota is 20 vision calls/day; the ingest loop stops at 18 to keep 2 in reserve. Do NOT enable billing - it removes the free tier.
 
+## Deploy (Render)
+
+- `Dockerfile` (multi-stage: Vite build, then FastAPI + built frontend) and `render.yaml`
+  (Render Blueprint) live at repo root. Render dashboard > New > Blueprint > this repo.
+- Required secrets (set manually in Render's dashboard, not in render.yaml): `GEMINI_API_KEY`,
+  `RECALL_TOKEN`. Both marked `sync: false` in render.yaml on purpose.
+- No `healthCheckPath` is set in render.yaml on purpose: `/health` is token-gated like every
+  other route (tests enforce this), so Render's HTTP health check would 401. Render falls
+  back to a plain TCP port-listening check instead, which needs no auth.
+- Free plan has no persistent disk: `data/` (ChromaDB memories, thumbnails) resets on redeploy
+  and likely on spin-down-then-wake after ~15 min idle. Acceptable for now (Zaid's call,
+  2026-07-29); revisit with a paid Starter + disk add-on if that becomes a problem.
+
 ## Logs and handoffs (required every session)
 
 - Master log: `MASTER_LOG.md` - append only, read just the tail (it is long).
