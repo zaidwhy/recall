@@ -616,3 +616,27 @@ cloudflared tunnel --url http://localhost:8000
 - Verified: backend imports OK, frontend builds clean. Pushed as 27a5163.
 
 *Last updated: 2026-07-02 - refinement pass*
+
+---
+
+## 2026-07-29 - Render deploy config (Docker + blueprint)
+
+- Added `Dockerfile` (multi-stage: Vite build, then FastAPI serving the built frontend, matching
+  the existing single-origin design) and `render.yaml` (Render Blueprint) at repo root, so the
+  app can go live on a real host instead of the dev-only cloudflared tunnel.
+- `GEMINI_API_KEY` and `RECALL_TOKEN` are set manually in Render's dashboard (`sync: false` in
+  render.yaml), never committed. No `healthCheckPath` is configured on purpose - `/health` is
+  intentionally token-gated (tests enforce this), so an HTTP health check would 401; Render
+  falls back to a plain TCP port-listening check instead.
+- Verified locally before pushing: `docker build` succeeds, and a running container correctly
+  401s unauthenticated requests and 200s token-authenticated ones, with the frontend build
+  landing (`frontend_built: true`).
+- Known limitation, accepted for now (Zaid's call): Render's free plan has no persistent disk,
+  so `data/` (ChromaDB memories, thumbnails) resets on redeploy and likely on spin-down/wake
+  after ~15 min idle. Revisit with a paid Starter + disk add-on if that becomes a problem.
+- Gemini stays as the LLM provider for this project specifically - Gemini Live's realtime voice
+  API has no equivalent on OpenRouter, unlike the other projects in this workspace which are
+  standardizing on OpenRouter's unified API.
+- Deployed live by Zaid on Render; confirmed working.
+
+*Last updated: 2026-07-29 - Render deploy*
