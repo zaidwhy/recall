@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this project, please cite it as below."
+title: "Recall: An AI With a Photographic Memory of Your World"
+authors:
+  - family-names: "Syed"
+    given-names: "Zaid Ali"
+date-released: 2026-06-16
+url: "https://github.com/zaidwhy/recall"
+repository-code: "https://github.com/zaidwhy/recall"
+license: MIT
+abstract: >
+  Point your phone camera at your space, ask out loud where you left
+  something, and get a spoken answer with the exact frame it saw it in.
+  Built on Gemini Live, Gemini Flash, and a local ChromaDB vector store.
