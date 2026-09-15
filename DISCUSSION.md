@@ -81,7 +81,7 @@ Do **not** run a persistent always-on Live session to "watch" the room — sessi
 - **Embeddings:** Gemini embeddings (free tier) or local `sentence-transformers` fallback.
 - **Frontend:** lightweight **mobile-first Vite + React** (or vanilla JS) using `getUserMedia` (**rear camera**, `facingMode: 'environment'`) for camera/mic, WebSocket to backend. For the demo/mobile path, the **built frontend is served by FastAPI on a single port** so one origin (and one tunnel) covers both the page and the WebSocket. Scaffold from official **`google-gemini/gemini-live-api-examples`**.
 - **Tunnel:** **`cloudflared`** quick tunnel for mobile testing (free, no signup, valid HTTPS cert — required because `getUserMedia` needs a secure context). See §13.
-- **Repo:** `github.com/syzayd/recall`, build-in-public, README with demo GIF + metrics + architecture diagram.
+- **Repo:** `github.com/zaidwhy/recall`, build-in-public, README with demo GIF + metrics + architecture diagram.
 - **Deploy (optional):** frontend on Vercel/GitHub Pages; backend on Render free tier or Hugging Face Spaces. The **recorded demo video is the primary artifact**, so live deploy is optional.
 
 ---
