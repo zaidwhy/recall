@@ -1,7 +1,7 @@
 # Recall - an AI with a photographic memory of your world
 
 [![CI](https://github.com/zaidwhy/recall/actions/workflows/ci.yml/badge.svg)](https://github.com/zaidwhy/recall/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-30%20passed%20offline-brightgreen)
+![Tests](https://img.shields.io/badge/tests-37%20passed%20offline-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Node](https://img.shields.io/badge/node-18%2B-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
