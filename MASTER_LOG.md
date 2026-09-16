@@ -640,3 +640,15 @@ cloudflared tunnel --url http://localhost:8000
 - Deployed live by Zaid on Render; confirmed working.
 
 *Last updated: 2026-07-29 - Render deploy*
+
+## 2026-09-16/17 - Live URL recorded, 13-section system-design doc
+
+- README and `career/PROFILE-FACTS.yaml` updated with the live Render URL
+  (`recall-o9hg.onrender.com`) and the "401 with no token = up by design, not down"
+  note, now that the deploy from 2026-07-29 has an actual URL on record everywhere.
+- New `ARCHITECTURE.md`: 13-section system-design case study (Problem through Future) -
+  same shape as CivilizationOS's and personal-llm's. Covers the scene-change gate, the
+  recency-weighted recall score (`DECAY_WEIGHT * log(1 + hours_ago)`), the free-tier
+  vision budget guard (18/day hard cap under the real 20/day limit, 120s floor), and the
+  token auth that makes the public tunnel safe to share.
+- Home footer link on zaidverse.vercel.app now points here with a "(live)" tag.
