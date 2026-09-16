@@ -10,6 +10,8 @@ Point your phone camera at your space. Ask out loud "where did I leave my keys?"
 
 Built on Gemini Live (push-to-talk voice), Gemini Flash (always-on vision), and a local ChromaDB vector store for offline semantic recall.
 
+**Live:** [recall-o9hg.onrender.com](https://recall-o9hg.onrender.com) (Render free tier - cold start after ~15 min idle). Every route, including `/health`, requires a token by design; a 401 with no token means the service is up, not down. Free tier has no persistent disk, so memories reset on redeploy or after a spin-down.
+
 <p align="center"><img src="docs/screenshots/start-screen.png" width="420" alt="Recall start screen - see once, remember always"></p>
 
 ---
