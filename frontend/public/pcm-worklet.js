@@ -5,7 +5,7 @@ class PCMCapture extends AudioWorkletProcessor {
     super();
     this._chunks = [];
     this._count = 0;
-    this._threshold = 2048; // ~43ms @ 48k, ~128ms @ 16k — keeps WS messages chunky
+    this._threshold = 2048; // ~43ms @ 48k, ~128ms @ 16k - keeps WS messages chunky
   }
 
   process(inputs) {
