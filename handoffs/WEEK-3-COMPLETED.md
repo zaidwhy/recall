@@ -1,19 +1,19 @@
 ---
-title: Recall — Week 3 Completed (Handoff)
+title: Recall - Week 3 Completed (Handoff)
 date: 2026-06-17
 project: recall
 status: Week 3 code complete; verify on phone + calibrate RECALL_MAX_DISTANCE; Week 4 unblocked
 ---
 
-# Recall — Week 3 Completed ✅
+# Recall - Week 3 Completed ✅
 
-> **Resume in one line:** "Load handoffs/WEEK-3-COMPLETED.md and start Week 4 — build eval/benchmark.py: staged object placements → scripted questions → recall@1/@3 + latency, printed into README."
+> **Resume in one line:** "Load handoffs/WEEK-3-COMPLETED.md and start Week 4 - build eval/benchmark.py: staged object placements → scripted questions → recall@1/@3 + latency, printed into README."
 
 > **Repo:** `github.com/syzayd/recall` (public, default branch `master`). Week 3 changes committed. Tag `week-3` after phone verification.
 
 ---
 
-## What we built (Week 3) — pending phone verification
+## What we built (Week 3) - pending phone verification
 
 | # | Feature | What it does | Status |
 |---|---------|--------------|--------|
@@ -30,9 +30,9 @@ status: Week 3 code complete; verify on phone + calibrate RECALL_MAX_DISTANCE; W
 
 ## Calibrate RECALL_MAX_DISTANCE (ongoing)
 
-Threshold is now `1.4` (raised from `1.0` after first phone test — was causing false negatives). Distance logging is live in the server console. To fine-tune:
+Threshold is now `1.4` (raised from `1.0` after first phone test - was causing false negatives). Distance logging is live in the server console. To fine-tune:
 
-1. Distance logging is already in `tools.py` — watch the server console while asking questions
+1. Distance logging is already in `tools.py` - watch the server console while asking questions
 2. Ask about things you recorded → note `top_dist` (should be < 1.0 for clear hits)
 3. Ask about things never recorded → note `top_dist` (should be > 1.2 for misses)
 4. Pick `RECALL_MAX_DISTANCE` to sit between those two clusters
@@ -60,7 +60,7 @@ recall/
 │   │   └── main.jsx
 │   ├── vite.config.js
 │   └── package.json
-├── eval/benchmark.py    # STUB — Week 4
+├── eval/benchmark.py    # STUB - Week 4
 ├── handoffs/
 │   ├── WEEK-1-COMPLETED.md
 │   ├── WEEK-2-COMPLETED.md
@@ -78,15 +78,15 @@ recall/
 > Node and cloudflared are NOT on the PowerShell PATH by default.
 
 ```powershell
-# Terminal 1 — build frontend (JSX + CSS changed this week)
+# Terminal 1 - build frontend (JSX + CSS changed this week)
 cd C:\Users\Asus\projects\recall\frontend
 npm run build
 
-# Terminal 2 — start backend
+# Terminal 2 - start backend
 cd C:\Users\Asus\projects\recall
 python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
-# Terminal 3 — tunnel
+# Terminal 3 - tunnel
 $env:PATH += ";C:\Program Files (x86)\cloudflared"
 cloudflared tunnel --url http://localhost:8000
 
@@ -111,34 +111,34 @@ cloudflared tunnel --url http://localhost:8000
 
 ## Architecture decisions (don't re-derive)
 
-- `asyncio.to_thread` for ChromaDB — it's a sync blocking call; running it in the receive loop without `to_thread` would stall audio delivery
-- Spotlight card cleared on `startTalk` — each new query gets a fresh spotlight (don't show stale result from a previous question)
-- `minutes_ago` in the tool payload is rounded to nearest minute — more natural to speak ("about 10 minutes ago") than an exact float
-- `distance` is not surfaced in the UI — it's internal confidence plumbing only
+- `asyncio.to_thread` for ChromaDB - it's a sync blocking call; running it in the receive loop without `to_thread` would stall audio delivery
+- Spotlight card cleared on `startTalk` - each new query gets a fresh spotlight (don't show stale result from a previous question)
+- `minutes_ago` in the tool payload is rounded to nearest minute - more natural to speak ("about 10 minutes ago") than an exact float
+- `distance` is not surfaced in the UI - it's internal confidence plumbing only
 
 ---
 
 ## Hard-won learnings (Week 3)
 
-- `RECALL_MAX_DISTANCE` must be calibrated empirically — the L2 distance from `all-MiniLM-L6-v2` is not normalized to [0,1]; true semantic hits can be anywhere below ~0.6, noise hits cluster above ~1.2, but the exact boundary depends on vocabulary
-- The `tool_call` attribute on Live session responses is separate from `server_content` — both can appear; handle them independently in the receive loop
+- `RECALL_MAX_DISTANCE` must be calibrated empirically - the L2 distance from `all-MiniLM-L6-v2` is not normalized to [0,1]; true semantic hits can be anywhere below ~0.6, noise hits cluster above ~1.2, but the exact boundary depends on vocabulary
+- The `tool_call` attribute on Live session responses is separate from `server_content` - both can appear; handle them independently in the receive loop
 - `FunctionResponse` needs `id=fc.id` to match the function call; some SDK versions are strict about this
 
 ---
 
 ## What's next
 
-### Week 4 — Make it credible
+### Week 4 - Make it credible
 - **`eval/benchmark.py`**: staged placements → scripted questions → recall@1/@3 + latency, printed into README
 - Quota tuning: confirm ingestion loop + voice sessions fit inside daily free limits over a full day of use
 - Feed `RECALL_MAX_DISTANCE` (now calibrated) into the eval as the confidence threshold
 
-### Week 5 — Polish + wow
+### Week 5 - Polish + wow
 - UI polish, accessibility/continuous-narration mode
 - Staged demo scenarios (charger, keys, where I put my coffee)
 - Record the **60s killer demo video**
 
-### Week 6 — Ship the story
+### Week 6 - Ship the story
 - Flesh out README (architecture diagram, metrics, demo GIF)
 - LinkedIn build-in-public series
 - Optional free deploy

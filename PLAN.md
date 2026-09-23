@@ -1,4 +1,4 @@
-# Recall — Implementation Plan (cloud-refined, 2026-06-16)
+# Recall - Implementation Plan (cloud-refined, 2026-06-16)
 
 > Canonical, build-ready plan for **Recall**, an AI with a photographic memory of your
 > physical world. Distilled from `DISCUSSION.md`, refined for **mobile-first capture**
@@ -13,12 +13,12 @@ environment, builds a persistent **episodic spatial-temporal memory**, and answe
 "where / when / what did I…" questions instantly out loud.
 
 > **Demo moment:** "Recall, where did I leave my charger?" → *"On the kitchen counter, next
-> to the kettle — you set it down about 10 minutes ago."* (and it shows the remembered frame.)
+> to the kettle - you set it down about 10 minutes ago."* (and it shows the remembered frame.)
 
 **Positioning:** existing "AI memory" tools (Rewind, Limitless) capture **screen + audio**.
-Recall's novelty is the **physical world via camera** — spatial-temporal memory of real
+Recall's novelty is the **physical world via camera** - spatial-temporal memory of real
 objects and places. Because the capture device is **the phone you always carry**, Recall is
-genuinely **portable / on-the-go** memory — closer to a wearable than a tethered desktop
+genuinely **portable / on-the-go** memory - closer to a wearable than a tethered desktop
 tool. State this differentiation explicitly in the README.
 
 The technical moat is the **episodic memory system** (ChromaDB + embeddings + temporal/
@@ -28,15 +28,15 @@ semantic retrieval via function calling), not "Gemini Live + camera."
 
 ## 2. Tech foundation (verified June 2026)
 
-- **Gemini Live API** — model **`gemini-3.1-flash-live-preview`** (verified working on the
-  free tier this session; the earlier-assumed `gemini-2.5-flash-live` id does **not** exist —
+- **Gemini Live API** - model **`gemini-3.1-flash-live-preview`** (verified working on the
+  free tier this session; the earlier-assumed `gemini-2.5-flash-live` id does **not** exist -
   list Live models via `client.models.list()` filtering `supported_actions` for
   `bidiGenerateContent`). Natively streams video + audio + text in one session (~200ms
   latency), supports async function calling, has a free tier. Used **only for on-demand voice
   Q&A**, with **manual activity detection** (push-to-talk start/end) rather than automatic VAD.
-- **Gemini Flash vision** (standard, generous free RPD) — used for **cheap periodic frame
+- **Gemini Flash vision** (standard, generous free RPD) - used for **cheap periodic frame
   ingestion**, not Live.
-- **Free-tier rule (critical):** keep **billing OFF** on the Gemini project — enabling
+- **Free-tier rule (critical):** keep **billing OFF** on the Gemini project - enabling
   billing deletes the free tier entirely (lesson from the Resume Job-Fit AI project).
 - **Stack:** Python 3.x + FastAPI (WebSocket relay) + `google-genai` SDK; ChromaDB (local,
   persistent) for the memory store; Gemini embeddings (free) or local `sentence-transformers`
@@ -48,7 +48,7 @@ semantic retrieval via function calling), not "Gemini Live + camera."
 ## 3. Mobile-first capture & single-origin tunnel (the key refinement)
 
 The dev laptop has **no built-in webcam**, so the **phone is the capture device**. Browser
-camera/mic access (`getUserMedia`) requires a **secure context (HTTPS)** — `localhost` is
+camera/mic access (`getUserMedia`) requires a **secure context (HTTPS)** - `localhost` is
 exempt, but a phone hitting the laptop over a LAN IP (`http://192.168.x.x`) is **not** secure
 and the camera silently fails. Therefore mobile testing **requires a public HTTPS URL**.
 
@@ -95,7 +95,7 @@ and the camera silently fails. Therefore mobile testing **requires a public HTTP
 
 ## 4. Decoupled architecture (free-tier protection)
 
-Do **not** run a persistent always-on Live session to "watch" the room — session caps +
+Do **not** run a persistent always-on Live session to "watch" the room - session caps +
 rate limits make that infeasible on free tier.
 
 - **Ingestion path (cheap, always-on while recording):** scene-change frame → **Gemini Flash
@@ -103,7 +103,7 @@ rate limits make that infeasible on free tier.
   thumbnail}` → embed → store in ChromaDB.
 - **Interaction path (Live, on demand):** open a **Gemini Live session only when the user is
   actively asking** (voice Q&A), then close it.
-- **Retrieval tool (the moat):** the Live session uses **function calling** —
+- **Retrieval tool (the moat):** the Live session uses **function calling** -
   `recall_memory(query)` (semantic + temporal search) and `log_observation(...)`. The model
   composes a natural spoken reply, optionally surfacing the remembered frame.
 
@@ -114,36 +114,36 @@ on/off toggle + recording indicator; view/delete observations + optional auto-ex
 
 ## 5. Build phases (3–6 weeks)
 
-- **Week 1 — Two hello-worlds (mobile path first):**
+- **Week 1 - Two hello-worlds (mobile path first):**
   1. **Phone camera/mic → FastAPI WebSocket over the cloudflared tunnel** (prove the mobile
-     capture path first — it is now the foundational/riskiest piece).
+     capture path first - it is now the foundational/riskiest piece).
   2. Frame → Gemini Flash vision → structured observation round-trip, and a Gemini Live
      voice round-trip. Prove both AI paths cheaply.
-- **Week 2 — Memory ingestion:** scene-change frame sampling → observation pipeline →
+- **Week 2 - Memory ingestion:** scene-change frame sampling → observation pipeline →
   ChromaDB store + thumbnails + timeline UI + record toggle.
-- **Week 3 — The magic:** `recall_memory` retrieval tool wired into the Live session via
+- **Week 3 - The magic:** `recall_memory` retrieval tool wired into the Live session via
   function calling; "where/when" voice Q&A working out loud with the remembered frame.
-- **Week 4 — Make it credible:** eval harness + recall@k/latency metrics; quota tuning +
+- **Week 4 - Make it credible:** eval harness + recall@k/latency metrics; quota tuning +
   privacy/delete controls.
-- **Week 5 — Polish + wow:** UI polish, accessibility mode (continuous narration), staged
+- **Week 5 - Polish + wow:** UI polish, accessibility mode (continuous narration), staged
   demo scenarios, record the 60s killer demo video.
-- **Week 6 — Ship the story:** README + architecture diagram, build-in-public LinkedIn
+- **Week 6 - Ship the story:** README + architecture diagram, build-in-public LinkedIn
   series, optional free deploy.
 
 ---
 
 ## 6. Critical files to create (greenfield)
 
-- `backend/main.py` — FastAPI app + `/ws` WebSocket endpoint + Gemini Live session manager +
+- `backend/main.py` - FastAPI app + `/ws` WebSocket endpoint + Gemini Live session manager +
   **static serving of the built `frontend/dist/`** (single origin).
-- `backend/memory.py` — ChromaDB wrapper: `log_observation`, `recall_memory`, embedding +
+- `backend/memory.py` - ChromaDB wrapper: `log_observation`, `recall_memory`, embedding +
   thumbnail handling.
-- `backend/tools.py` — function-calling tool definitions wired into the Live session.
-- `backend/perception.py` — frame sampling + scene-change detection + structured observation
+- `backend/tools.py` - function-calling tool definitions wired into the Live session.
+- `backend/perception.py` - frame sampling + scene-change detection + structured observation
   extraction (Flash vision).
-- `frontend/` — mobile-first Vite app: rear-camera/mic capture, WebSocket client, live view +
+- `frontend/` - mobile-first Vite app: rear-camera/mic capture, WebSocket client, live view +
   memory timeline + voice panel. Vite `server.proxy` for `/ws` in dev.
-- `eval/benchmark.py` — staged retrieval benchmark → recall@k + latency report.
+- `eval/benchmark.py` - staged retrieval benchmark → recall@k + latency report.
 - `.env` (gitignored), `.env.example`, `.gitignore`, `README.md`.
 
 ---
@@ -155,7 +155,7 @@ on/off toggle + recording indicator; view/delete observations + optional auto-ex
 2. `cloudflared tunnel --url http://localhost:8000`
 3. Open the printed `https://*.trycloudflare.com` URL on the **phone**; grant camera + mic.
 4. Confirm rear-camera frames arrive at the backend over `wss`.
-5. Place objects, ask "where did I put X?" / "when did I last see Y?" — confirm correct
+5. Place objects, ask "where did I put X?" / "when did I last see Y?" - confirm correct
    spoken answers + correct remembered frame.
 
 **Quantitative:** run `eval/benchmark.py` → confirm recall@1/@3 and median latency; record
