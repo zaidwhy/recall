@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 450" width="900" height="450" role="img" aria-label="Recall in one picture. The see loop: the phone sends a frame every 2 seconds; only frames whose mean pixel difference is at least 12 go on, at most one vision call every 120 seconds, to Gemini Flash, whose description is stored in a local ChromaDB. The ask loop: you hold to ask, Gemini Live calls the recall_memory tool, which takes 9 semantic candidates plus exact object-name matches, re-ranks by distance plus 0.25 times log of one plus hours ago, and keeps the top 3. If the top match is within distance 1.4 you hear the location and see the frame; otherwise no frame is shown and the model is instructed to say it has not seen it yet.">
+<!--
+  ============================================================================
+  ORIGINAL WORK - AUTHORSHIP MANIFEST
+  ============================================================================
+  Title      : Recall, see then ask.
+  Author     : Zaid Ali Syed
+  ORCID      : 0009-0003-4313-1510
+  Origin     : https://github.com/zaidwhy/recall
+  Copyright  : (c) 2026 Zaid Ali Syed. MIT licensed with the repository.
+
+  Every number is read from the code on 2026-09-27:
+  2 s frames        frontend/src/App.jsx, CAPTURE_INTERVAL_MS
+  pixel diff 12     backend/perception.py, _SCENE_THRESHOLD
+  120 s floor       backend/main.py, FLASH_MIN_GAP_S
+  60 s dedup        backend/memory.py, DEDUP_WINDOW_S
+  9, 0.25, top 3    backend/memory.py, recall_for_tool and DECAY_WEIGHT
+  1.4 gate          backend/memory.py, RECALL_MAX_DISTANCE
+  The spoken refusal is a system-prompt instruction (backend/live.py);
+  the code-enforced part is that no frame is shown when confident=false.
+
+  Hand-authored artwork. Animation degrades gracefully: static attribute
+  values are the finished state.
+  ============================================================================
+-->
+<defs>
+<clipPath id="rc-clip"><rect x="0" y="0" width="900" height="450" rx="10"/></clipPath>
+<path id="rc-see" d="M180 128 H 700 V 196" fill="none"/>
+<path id="rc-ask" d="M700 250 V 318 H 180" fill="none"/>
+</defs>
+
+<g clip-path="url(#rc-clip)" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace">
+<rect x="0" y="0" width="900" height="450" fill="#0B0E14"/>
+
+<text x="40" y="36" fill="#E9EEF5" font-size="17" font-weight="700" letter-spacing="1.6">SEE ONCE, ASK LATER</text>
+<text x="40" y="57" fill="#7D8794" font-size="11.5">The voice model never guesses where things are. It calls a tool over what the camera actually saw.</text>
+
+<!-- track lines -->
+<g stroke="#2A3542" stroke-width="1.5" fill="none"><use href="#rc-see"/><use href="#rc-ask"/></g>
+<!-- motion: one frame travelling the see loop, one query travelling the ask loop -->
+<circle r="4" fill="#34D399"><animateMotion dur="4s" repeatCount="indefinite"><mpath href="#rc-see"/></animateMotion></circle>
+<circle r="4" fill="#22D3EE"><animateMotion dur="4s" begin="2s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#rc-ask"/></animateMotion></circle>
+
+<!-- SEE row -->
+<text x="40" y="94" fill="#34D399" font-size="10.5" letter-spacing="2">SEE  ·  every 2 s</text>
+<g>
+<rect x="40" y="104" width="140" height="48" rx="7" fill="#0E141C" stroke="#1B2430" stroke-width="1.5"/>
+<text x="54" y="125" fill="#E9EEF5" font-size="12" font-weight="700">phone camera</text>
+<text x="54" y="142" fill="#7D8794" font-size="10">frame over WebSocket</text>
+
+<rect x="210" y="104" width="150" height="48" rx="7" fill="#0E141C" stroke="#1B2430" stroke-width="1.5"/>
+<text x="224" y="125" fill="#E9EEF5" font-size="12" font-weight="700">scene changed?</text>
+<text x="224" y="142" fill="#7D8794" font-size="10">mean pixel diff &gt;= 12</text>
+
+<rect x="390" y="104" width="160" height="48" rx="7" fill="#0E141C" stroke="#1B2430" stroke-width="1.5"/>
+<text x="404" y="125" fill="#E9EEF5" font-size="12" font-weight="700">Gemini Flash</text>
+<text x="404" y="142" fill="#7D8794" font-size="10">describe, max 1 per 120 s</text>
+
+<rect x="580" y="104" width="160" height="48" rx="7" fill="#0E141C" stroke="#1B2430" stroke-width="1.5"/>
+<text x="594" y="125" fill="#E9EEF5" font-size="12" font-weight="700">embed locally</text>
+<text x="594" y="142" fill="#7D8794" font-size="10">MiniLM via ONNX, $0</text>
+</g>
+
+<!-- memory -->
+<rect x="560" y="196" width="300" height="54" rx="8" fill="#0C1712" stroke="#34D399" stroke-width="2"/>
+<text x="578" y="219" fill="#34D399" font-size="12.5" font-weight="700">ChromaDB, on this machine</text>
+<text x="578" y="238" fill="#9AA5B1" font-size="10">same place within 60 s: updated, not duplicated</text>
+
+<!-- ASK row -->
+<text x="40" y="284" fill="#22D3EE" font-size="10.5" letter-spacing="2">ASK  ·  hold to talk</text>
+<g>
+<rect x="40" y="294" width="140" height="48" rx="7" fill="#0E141C" stroke="#1B2430" stroke-width="1.5"/>
+<text x="54" y="315" fill="#E9EEF5" font-size="12" font-weight="700">"where are</text>
+<text x="54" y="332" fill="#E9EEF5" font-size="12" font-weight="700">my keys?"</text>
+
+<rect x="210" y="294" width="150" height="48" rx="7" fill="#0E141C" stroke="#1B2430" stroke-width="1.5"/>
+<text x="224" y="315" fill="#E9EEF5" font-size="12" font-weight="700">Gemini Live</text>
+<text x="224" y="332" fill="#7D8794" font-size="10">calls recall_memory()</text>
+
+<rect x="390" y="294" width="280" height="48" rx="7" fill="#0E1720" stroke="#22D3EE" stroke-width="1.5"/>
+<text x="404" y="315" fill="#22D3EE" font-size="11" font-weight="700">9 semantic + exact-name hits</text>
+<text x="404" y="332" fill="#9AA5B1" font-size="10">distance + 0.25 x log(1 + hours) -&gt; top 3</text>
+</g>
+
+<!-- outcomes -->
+<rect x="40" y="376" width="400" height="30" rx="6" fill="#0C1712" stroke="#1F4D3A" stroke-width="1.2"/>
+<text x="54" y="395" fill="#34D399" font-size="10.5">top match distance &lt;= 1.4: spoken answer + its frame</text>
+<rect x="460" y="376" width="400" height="30" rx="6" fill="#170E10" stroke="#5C2A2E" stroke-width="1.2"/>
+<text x="474" y="395" fill="#F87171" font-size="10.5">otherwise: no frame; told to say "not seen yet"</text>
+
+
+<rect x="0" y="426" width="900" height="24" fill="#070A0F"/>
+<text x="40" y="442" fill="#4A5563" font-size="10" letter-spacing="2.2">RECALL  ·  ORIGINAL WORK OF ZAID ALI SYED  ·  ORCID 0009-0003-4313-1510  ·  MMXXVI</text>
+</g>
+</svg>

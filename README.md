@@ -8,6 +8,8 @@
 
 Point your phone camera at your space. Ask out loud "where did I leave my keys?" and get a spoken answer with the exact frame it saw them in.
 
+<img src="docs/see-then-ask.svg" alt="Recall in one picture. See loop: a frame every 2 seconds; only frames with mean pixel difference of at least 12, and at most one vision call every 120 seconds, go to Gemini Flash, whose description is embedded locally into ChromaDB. Ask loop: hold to ask, Gemini Live calls the recall_memory tool, which takes 9 semantic candidates plus exact object-name matches, re-ranks by distance plus 0.25 times log of one plus hours ago, and keeps the top 3. If the top match is within distance 1.4 you hear the location and see its frame; otherwise no frame is shown and the model is instructed to say it has not seen it yet." width="100%">
+
 Built on Gemini Live (push-to-talk voice), Gemini Flash (always-on vision), and a local ChromaDB vector store for offline semantic recall.
 
 **Live:** [recall-o9hg.onrender.com](https://recall-o9hg.onrender.com) (Render free tier - cold start after ~15 min idle). Every route, including `/health`, requires a token by design; a 401 with no token means the service is up, not down. Free tier has no persistent disk, so memories reset on redeploy or after a spin-down.
