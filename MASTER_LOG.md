@@ -657,3 +657,9 @@ cloudflared tunnel --url http://localhost:8000
 
 - Em dash purge: 423 occurrences replaced with " - " across 15 tracked files (docs, handoffs, the example env template, frontend index.html and worklet comment).
 - Verified after: pytest tests 37 passed, frontend npm run build succeeds.
+
+## 2026-09-27 - One-diagram README hero
+
+- `docs/see-then-ask.svg`: hand-authored hero with the see loop (2 s frames, pixel diff >= 12, 120 s Flash floor, local MiniLM embeddings, 60 s dedup) and the ask loop (9 semantic + exact-name hits, distance + 0.25 x log(1 + hours), top 3, 1.4 gate). Numbers read from `backend/` and `App.jsx`.
+- Diagram is explicit that the spoken "not seen yet" is a system-prompt instruction; the code-enforced part is that no frame is shown when confident=false.
+- GitHub description rewritten (approved by Zaid): "Recall@1: 100%" framing replaced with "10/10 on its eval"; "live" kept out because the URL returns 401 to a stranger by design.
