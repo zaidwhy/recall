@@ -663,3 +663,8 @@ cloudflared tunnel --url http://localhost:8000
 - `docs/see-then-ask.svg`: hand-authored hero with the see loop (2 s frames, pixel diff >= 12, 120 s Flash floor, local MiniLM embeddings, 60 s dedup) and the ask loop (9 semantic + exact-name hits, distance + 0.25 x log(1 + hours), top 3, 1.4 gate). Numbers read from `backend/` and `App.jsx`.
 - Diagram is explicit that the spoken "not seen yet" is a system-prompt instruction; the code-enforced part is that no frame is shown when confident=false.
 - GitHub description rewritten (approved by Zaid): "Recall@1: 100%" framing replaced with "10/10 on its eval"; "live" kept out because the URL returns 401 to a stranger by design.
+
+## 2026-09-28 - Frontend dependency advisories
+
+- `frontend/`: `npm audit fix`, then vite 4 -> 6.4 and @vitejs/plugin-react 4.7. The dev server runs with `host: true`, so the vite/esbuild dev-server advisories were reachable on the LAN. npm audit 0; build clean; `vite preview` and `vite` both serve; the built page renders in Chromium (only an existing favicon 404). Dockerfile's node:20 supports vite 6.
+- chromadb 1.5.9 still carries 4 advisories with no patched release; all are in Chroma's HTTP server, which recall never runs (embedded `PersistentClient`). Bump when a fix ships (zaid-os tech debt #32).
