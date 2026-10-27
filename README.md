@@ -38,7 +38,7 @@ Built on Gemini Live (push-to-talk voice), Gemini Flash (always-on vision), and 
 │                              │   └─ ChromaDB (local)         │   │
 │                              └───────────────────────────────┘   │
 │                                               │                  │
-│  [🎤 Hold to ask] ──mic audio──► [Gemini Live session]           │
+│  [Hold to ask]    ──mic audio──► [Gemini Live session]           │
 │                                   └─ recall_memory() tool        │
 │                                       └─ ChromaDB search         │
 │                                           └─ spoken answer +     │
@@ -105,7 +105,7 @@ Most "AI + camera" projects pipe a frame to a vision model and echo the response
 ```bash
 # 1. Backend
 python -m venv .venv && .venv\Scripts\activate   # Windows
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 
 # Add your key to .env
 echo GEMINI_API_KEY=your_key_here > .env
@@ -156,9 +156,9 @@ cd frontend && npm install && npm run build
 | 9 | water bottle / kitchen table | `where did I leave my water bottle` | ✓ | ✓ | 1.062 | 157.8 |
 | 10 | headphones / office desk | `where are my headphones` | ✓ | ✓ | 0.840 | 166.9 |
 
-To reproduce: `python -m eval.benchmark` (creates an isolated temp ChromaDB - never touches production data).
-
 </details>
+
+To reproduce: `python -m eval.benchmark` (creates an isolated temp ChromaDB - never touches production data).
 
 ---
 
@@ -180,7 +180,7 @@ To reproduce: `python -m eval.benchmark` (creates an isolated temp ChromaDB - ne
 | Embeddings | `all-MiniLM-L6-v2` via ChromaDB (local ONNX, no API cost) |
 | Vector store | ChromaDB (persistent local store, L2 distance, time-decay re-ranking) |
 | Backend | FastAPI + WebSocket (single server for both frontend and WS) |
-| Frontend | React + Vite 4 (pinned - Vite 5 native binary blocked on some Windows setups) |
+| Frontend | React 18 + Vite 6, built once and served by the backend from `frontend/dist` |
 | Tunnel | cloudflared (HTTPS for phone camera + mic permissions) |
 
 ---

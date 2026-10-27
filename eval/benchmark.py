@@ -228,7 +228,7 @@ def build_report(results: list[CaseResult]) -> str:
     lines = [
         "## Eval Results",
         "",
-        f"*Last run: {date.today().isoformat()} &mdash;"
+        f"*Last run: {date.today().isoformat()} -"
         f" {corpus} observations ({len(CASES)} targets + {len(DISTRACTORS)} distractors)*",
         "",
         "| Metric | Value |",
@@ -252,7 +252,18 @@ def build_report(results: list[CaseResult]) -> str:
             f"| {'✓' if r.hit1 else '✗'} | {'✓' if r.hit3 else '✗'} "
             f"| {dist_str} | {r.latency_ms:.1f} |"
         )
-    lines += ["", "</details>", ""]
+    # The reproduce line lives inside the generated section; update_readme replaces everything
+    # up to the next "## " heading, so a hand-written line here would be lost on every run.
+    lines += [
+        "",
+        "</details>",
+        "",
+        "To reproduce: `python -m eval.benchmark` (creates an isolated temp ChromaDB"
+        " - never touches production data).",
+        "",
+        "---",
+        "",
+    ]
     return "\n".join(lines)
 
 

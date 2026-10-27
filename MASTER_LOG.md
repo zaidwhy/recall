@@ -668,3 +668,10 @@ cloudflared tunnel --url http://localhost:8000
 
 - `frontend/`: `npm audit fix`, then vite 4 -> 6.4 and @vitejs/plugin-react 4.7. The dev server runs with `host: true`, so the vite/esbuild dev-server advisories were reachable on the LAN. npm audit 0; build clean; `vite preview` and `vite` both serve; the built page renders in Chromium (only an existing favicon 404). Dockerfile's node:20 supports vite 6.
 - chromadb 1.5.9 still carries 4 advisories with no patched release; all are in Chroma's HTTP server, which recall never runs (embedded `PersistentClient`). Bump when a fix ships (zaid-os tech debt #32).
+
+## 2026-10-28 night - stranger read of the README, benchmark writer
+
+- Ran `pytest tests/ -q` (41 then 44 passed) and `python -m eval.benchmark` end to end: Recall@1 10/10, Recall@3 10/10, median 212.8 ms on a loaded laptop (README keeps the 2026-06-17 run, 149.3 ms; recall numbers identical, latency is machine-dependent).
+- The benchmark's README rewrite wrote `&mdash;` (an em dash entity) and dropped the "To reproduce" line, because update_readme replaces everything up to the next `## ` heading. Fixed in eval/benchmark.py: plain hyphen, the reproduce line and the closing rule are part of the generated section. 3 tests in tests/test_benchmark_report.py (written first, 2 failed before the fix).
+- README Quick start pointed at a root requirements.txt that does not exist; now `backend/requirements.txt`. Stack row said Vite 4 pinned; the frontend is on Vite 6. Diagram mic emoji removed.
+- Not verified: `docker build .` (Docker Desktop not running), so the pillow 13 and vite 6.4.4 bumps from earlier tonight are unverified in the Render image.
