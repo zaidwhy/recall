@@ -1,3 +1,5 @@
+<img src=".github/plate.svg" alt="Recall: Point, ask out loud, and get back the exact frame the camera saw it in. Recall@1 10 of 10; 149 ms median latency; local ONNX embeddings. Core strip: 220 commits over 16 weeks, Jun 2026 to Sep 2026." width="100%">
+
 # Recall - an AI with a photographic memory of your world
 
 [![CI](https://github.com/zaidwhy/recall/actions/workflows/ci.yml/badge.svg)](https://github.com/zaidwhy/recall/actions/workflows/ci.yml)
@@ -207,3 +209,7 @@ that pin their behavior.
 ## License
 
 [MIT](LICENSE).
+
+---
+
+<sub>One plate from the survey at [github.com/zaidwhy](https://github.com/zaidwhy). The strip on the plate above is this repository's own commit history, one band per week.</sub>
