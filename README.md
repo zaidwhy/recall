@@ -1,4 +1,7 @@
-<img src=".github/plate.svg" alt="Recall: Point, ask out loud, and get back the exact frame the camera saw it in. Recall@1 10 of 10; 149 ms median latency; local ONNX embeddings. Core strip: 220 commits over 16 weeks, Jun 2026 to Sep 2026." width="100%">
+<picture>
+<source media="(max-width: 600px)" srcset=".github/plate-narrow.svg">
+<img src=".github/plate.svg" alt="Recall: Point, ask out loud, and get back the exact frame the camera saw it in. Recall@1 10 of 10; 149 ms median latency; local ONNX embeddings. Core strip: 224 commits over 20 weeks, Jun 2026 to Oct 2026." width="100%">
+</picture>
 
 # Recall - an AI with a photographic memory of your world
 
