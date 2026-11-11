@@ -24,6 +24,22 @@ def test_health_without_token_is_401():
     assert resp.json() == {"error": "unauthorized"}
 
 
+def test_browser_without_token_gets_401_page_not_app():
+    client = TestClient(app)
+    resp = client.get("/", headers={"Accept": "text/html,application/xhtml+xml"})
+    assert resp.status_code == 401
+    assert "This instance is private." in resp.text
+    assert "recall_token" not in resp.headers.get("set-cookie", "")
+    assert GOOD_TOKEN not in resp.text
+
+
+def test_browser_html_post_without_token_stays_json_401():
+    client = TestClient(app)
+    resp = client.delete("/memory", headers={"Accept": "text/html"})
+    assert resp.status_code == 401
+    assert resp.json() == {"error": "unauthorized"}
+
+
 def test_health_with_wrong_token_is_401():
     client = TestClient(app)
     resp = client.get("/health", headers={"X-Recall-Token": "not-the-token"})

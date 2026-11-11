@@ -22,7 +22,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -58,11 +58,33 @@ def _request_token(request: Request) -> str | None:
     )
 
 
+# A visitor following the repo's live link sees this instead of a bare JSON 401. It names
+# no route, token format or memory count: the page says the service is up, nothing more.
+_TOKEN_REQUIRED_PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recall - token required</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101114;color:#d8d6cf;
+font:16px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;padding:16px;box-sizing:border-box}
+main{max-width:34rem}h1{font-size:1.1rem;color:#f2efe6;margin:0 0 .75rem}
+code{color:#e8b04a}a{color:#e8b04a}
+</style></head><body><main>
+<h1>Recall is running. This instance is private.</h1>
+<p>Recall remembers what a camera and screen have seen, so every route on this deployment,
+including <code>/health</code>, needs the owner's token. Without it you get this page and a 401.</p>
+<p>To try it, run your own copy with your own Gemini key:
+<a href="https://github.com/zaidwhy/recall">github.com/zaidwhy/recall</a>.</p>
+</main></body></html>"""
+
+
 class TokenAuthMiddleware(BaseHTTPMiddleware):
     """Requires RECALL_TOKEN (header, query param, or cookie) on every HTTP route."""
 
     async def dispatch(self, request: Request, call_next):
         if _request_token(request) != RECALL_TOKEN:
+            if request.method == "GET" and "text/html" in request.headers.get("accept", ""):
+                return HTMLResponse(_TOKEN_REQUIRED_PAGE, status_code=401)
             return JSONResponse({"error": "unauthorized"}, status_code=401)
         response = await call_next(request)
         if request.cookies.get(_TOKEN_COOKIE) != RECALL_TOKEN:

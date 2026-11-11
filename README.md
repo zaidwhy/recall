@@ -6,7 +6,7 @@
 # Recall - an AI with a photographic memory of your world
 
 [![CI](https://github.com/zaidwhy/recall/actions/workflows/ci.yml/badge.svg)](https://github.com/zaidwhy/recall/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-44%20passed%20offline-brightgreen)
+![Tests](https://img.shields.io/badge/tests-46%20passed%20offline-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Node](https://img.shields.io/badge/node-18%2B-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -17,7 +17,7 @@ Point your phone camera at your space. Ask out loud "where did I leave my keys?"
 
 Built on Gemini Live (push-to-talk voice), Gemini Flash (always-on vision), and a local ChromaDB vector store for offline semantic recall.
 
-**Live:** [recall-o9hg.onrender.com](https://recall-o9hg.onrender.com) (Render free tier - cold start after ~15 min idle). Every route, including `/health`, requires a token by design; a 401 with no token means the service is up, not down. Free tier has no persistent disk, so memories reset on redeploy or after a spin-down.
+**Live:** [recall-o9hg.onrender.com](https://recall-o9hg.onrender.com) (Render free tier - cold start after ~15 min idle). Every route, including `/health`, requires a token by design; a browser without the token gets a short "this instance is private" page with status 401, and API clients get a JSON 401; either means the service is up, not down. Free tier has no persistent disk, so memories reset on redeploy or after a spin-down.
 
 <p align="center"><img src="docs/screenshots/start-screen.png" width="420" alt="Recall start screen - see once, remember always"></p>
 

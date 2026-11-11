@@ -675,3 +675,9 @@ cloudflared tunnel --url http://localhost:8000
 - The benchmark's README rewrite wrote `&mdash;` (an em dash entity) and dropped the "To reproduce" line, because update_readme replaces everything up to the next `## ` heading. Fixed in eval/benchmark.py: plain hyphen, the reproduce line and the closing rule are part of the generated section. 3 tests in tests/test_benchmark_report.py (written first, 2 failed before the fix).
 - README Quick start pointed at a root requirements.txt that does not exist; now `backend/requirements.txt`. Stack row said Vite 4 pinned; the frontend is on Vite 6. Diagram mic emoji removed.
 - Not verified: `docker build .` (Docker Desktop not running), so the pillow 13 and vite 6.4.4 bumps from earlier tonight are unverified in the Render image.
+
+## 2026-11-11 - token-required page at the live root (D-240)
+
+- The repo's live link (recall-o9hg.onrender.com) returned a bare `{"error":"unauthorized"}`. TokenAuthMiddleware now answers a tokenless GET that accepts `text/html` with a short "Recall is running. This instance is private." page, still status 401, no cookie set, no route or token detail. API clients, non-GET requests and `/ws` are unchanged (JSON 401 / close 4401).
+- 2 tests added in tests/test_smoke.py (browser GET gets the page with 401; DELETE with an HTML Accept stays JSON 401). `pytest tests/ -q`: 46 passed. README badge 44 -> 46, live-link note updated.
+- Not verified: the Render redeploy (needs the push to trigger it, then `curl -H "Accept: text/html"` on the root); `docker build .` not run (no dependency or frontend change).
