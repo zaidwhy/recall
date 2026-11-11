@@ -681,3 +681,4 @@ cloudflared tunnel --url http://localhost:8000
 - The repo's live link (recall-o9hg.onrender.com) returned a bare `{"error":"unauthorized"}`. TokenAuthMiddleware now answers a tokenless GET that accepts `text/html` with a short "Recall is running. This instance is private." page, still status 401, no cookie set, no route or token detail. API clients, non-GET requests and `/ws` are unchanged (JSON 401 / close 4401).
 - 2 tests added in tests/test_smoke.py (browser GET gets the page with 401; DELETE with an HTML Accept stays JSON 401). `pytest tests/ -q`: 46 passed. README badge 44 -> 46, live-link note updated.
 - Not verified: the Render redeploy (needs the push to trigger it, then `curl -H "Accept: text/html"` on the root); `docker build .` not run (no dependency or frontend change).
+- Vite 6.4.4 -> 6.4.5 (Dependabot #67, server.fs.deny bypass, dev server only). `npm run build` OK; `docker build .` not run.
