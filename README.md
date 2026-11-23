@@ -5,6 +5,8 @@
 
 # Recall - an AI with a photographic memory of your world
 
+[![A brass stylus resting on a worn brown wax cylinder beside a blue paper cylinder, inside an old phonograph. AI-generated illustration.](docs/media/hero.webp)](docs/media/hero-loop.mp4)
+
 [![CI](https://github.com/zaidwhy/recall/actions/workflows/ci.yml/badge.svg)](https://github.com/zaidwhy/recall/actions/workflows/ci.yml)
 ![Tests](https://img.shields.io/badge/tests-46%20passed%20offline-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
